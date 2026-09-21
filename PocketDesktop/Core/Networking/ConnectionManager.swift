@@ -186,11 +186,12 @@ public final class ConnectionManager: ObservableObject, SignalingClientDelegate 
             }
             
         case .streamFrame:
-            if let frame = message.decodePayload(StreamFramePayload.self),
-               let data = Data(base64Encoded: frame.frameBase64),
-               let img = UIImage(data: data) {
-                DispatchQueue.main.async {
-                    self.liveStreamImage = img
+            if let frame = message.decodePayload(StreamFramePayload.self) {
+                let raw = frame.frameBase64 ?? frame.data ?? ""
+                if !raw.isEmpty, let data = Data(base64Encoded: raw), let img = UIImage(data: data) {
+                    DispatchQueue.main.async {
+                        self.liveStreamImage = img
+                    }
                 }
             }
             

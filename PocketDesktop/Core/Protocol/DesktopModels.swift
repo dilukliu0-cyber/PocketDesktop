@@ -121,15 +121,17 @@ public struct StreamControlPayload: Codable {
 }
 
 public struct StreamFramePayload: Codable {
-    public let displayId: Int
-    public let frameBase64: String
-    public let width: Int
-    public let height: Int
-    public let timestamp: Double
+    public let displayId: Int?
+    public let frameBase64: String?
+    public let data: String?
+    public let width: Int?
+    public let height: Int?
+    public let timestamp: Double?
     
-    public init(displayId: Int, frameBase64: String, width: Int, height: Int, timestamp: Double) {
+    public init(displayId: Int? = nil, frameBase64: String? = nil, data: String? = nil, width: Int? = nil, height: Int? = nil, timestamp: Double? = nil) {
         self.displayId = displayId
         self.frameBase64 = frameBase64
+        self.data = data
         self.width = width
         self.height = height
         self.timestamp = timestamp
