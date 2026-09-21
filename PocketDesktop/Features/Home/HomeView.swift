@@ -40,6 +40,10 @@ public struct HomeView: View {
                     trackpadSurfaceView
                         .padding(.horizontal, 20)
                     
+                    // QUICK APPS ROW: Literal app icons (Chrome, Discord, etc.)
+                    quickAppsRow
+                        .padding(.horizontal, 20)
+                    
                     // 4. BOTTOM 3 ACTION BUTTONS: [ Клавиатура ] [ Стрим ] [ Окна ]
                     bottomNavigationButtons
                         .padding(.horizontal, 20)
@@ -298,6 +302,37 @@ public struct HomeView: View {
             }
         }
         .frame(maxHeight: .infinity)
+    }
+    
+    // MARK: - Quick Open Apps Row
+    private var quickAppsRow: some View {
+        let apps: [DesktopWindow] = connection.openWindows.isEmpty ? [
+            DesktopWindow(id: "chrome", title: "Google Chrome", appName: "chrome"),
+            DesktopWindow(id: "discord", title: "Discord", appName: "Discord")
+        ] : connection.openWindows
+        
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(apps) { win in
+                    Button(action: {
+                        Haptics.shared.click()
+                        showingWindows = true
+                    }) {
+                        HStack(spacing: 8) {
+                            BrandAppIconView(appName: win.appName, size: 26)
+                            Text(win.appName.isEmpty ? win.title : win.appName)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.pdPrimaryText)
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.pdCardBackground))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.pdBorder, lineWidth: 1))
+                    }
+                }
+            }
+        }
     }
     
     // MARK: - 4. Bottom 3 Big Navigation Buttons

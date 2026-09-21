@@ -33,6 +33,7 @@
 		8D1A826F5C2EBF4BE7E5822C /* BrowserTabsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E846852DB9A5D0C03D2CEA3 /* BrowserTabsView.swift */; };
 		C52EFF6F5D0867D00251D90D /* BrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91F07B2B135CBE8BA9A0AA58 /* BrowserView.swift */; };
 		FA5449C6A4FB846CC8241027 /* SimplifiedDesktopView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A94F76E70A0B80123A23732F /* SimplifiedDesktopView.swift */; };
+		FA5449C6A4FB846CC8241030 /* BrandAppIconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A94F76E70A0B80123A237330 /* BrandAppIconView.swift */; };
 		0CD76BABDA347C00D85A0F61 /* DeviceSwitcherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D9C7F496D13B9F3471D0C20 /* DeviceSwitcherView.swift */; };
 		35EFE79A908613D279A5E5AF /* ConnectionErrorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D3E779D771DC4F83407C8FC /* ConnectionErrorView.swift */; };
 		DA0F88C1F36DF9298BD29456 /* FilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FDC939415FAEAA75B0BDA8B /* FilesView.swift */; };
@@ -83,6 +84,7 @@
 		3E846852DB9A5D0C03D2CEA3 /* BrowserTabsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PocketDesktop/Features/Browser/BrowserTabsView.swift"; sourceTree = "<group>"; };
 		91F07B2B135CBE8BA9A0AA58 /* BrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PocketDesktop/Features/Browser/BrowserView.swift"; sourceTree = "<group>"; };
 		A94F76E70A0B80123A23732F /* SimplifiedDesktopView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PocketDesktop/Features/Desktop/SimplifiedDesktopView.swift"; sourceTree = "<group>"; };
+		A94F76E70A0B80123A237330 /* BrandAppIconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PocketDesktop/Features/Desktop/BrandAppIconView.swift"; sourceTree = "<group>"; };
 		1D9C7F496D13B9F3471D0C20 /* DeviceSwitcherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PocketDesktop/Features/Devices/DeviceSwitcherView.swift"; sourceTree = "<group>"; };
 		0D3E779D771DC4F83407C8FC /* ConnectionErrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PocketDesktop/Features/Error/ConnectionErrorView.swift"; sourceTree = "<group>"; };
 		9FDC939415FAEAA75B0BDA8B /* FilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PocketDesktop/Features/Files/FilesView.swift"; sourceTree = "<group>"; };
@@ -165,6 +167,7 @@
 				3E846852DB9A5D0C03D2CEA3 /* BrowserTabsView.swift */,
 				91F07B2B135CBE8BA9A0AA58 /* BrowserView.swift */,
 				A94F76E70A0B80123A23732F /* SimplifiedDesktopView.swift */,
+				A94F76E70A0B80123A237330 /* BrandAppIconView.swift */,
 				1D9C7F496D13B9F3471D0C20 /* DeviceSwitcherView.swift */,
 				0D3E779D771DC4F83407C8FC /* ConnectionErrorView.swift */,
 				9FDC939415FAEAA75B0BDA8B /* FilesView.swift */,
@@ -330,6 +333,7 @@
 				8D1A826F5C2EBF4BE7E5822C /* BrowserTabsView.swift in Sources */,
 				C52EFF6F5D0867D00251D90D /* BrowserView.swift in Sources */,
 				FA5449C6A4FB846CC8241027 /* SimplifiedDesktopView.swift in Sources */,
+				FA5449C6A4FB846CC8241030 /* BrandAppIconView.swift in Sources */,
 				0CD76BABDA347C00D85A0F61 /* DeviceSwitcherView.swift in Sources */,
 				35EFE79A908613D279A5E5AF /* ConnectionErrorView.swift in Sources */,
 				DA0F88C1F36DF9298BD29456 /* FilesView.swift in Sources */,

@@ -75,6 +75,43 @@ public struct DesktopWindow: Codable, Identifiable, Equatable {
         self.thumbnailBase64 = thumbnailBase64
         self.isFocused = isFocused
     }
+    
+    enum CodingKeys: String, CodingKey {
+        case id, hwnd, pid, title, appName, appIcon, displayId, bounds, thumbnailBase64, isFocused
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        
+        let rawHwnd: Int?
+        if let h = try? c.decode(Int.self, forKey: .hwnd) {
+            rawHwnd = h
+        } else if let s = try? c.decode(String.self, forKey: .hwnd), let parsed = Int(s) {
+            rawHwnd = parsed
+        } else {
+            rawHwnd = nil
+        }
+        self.hwnd = rawHwnd
+        
+        if let strId = try? c.decode(String.self, forKey: .id) {
+            self.id = strId
+        } else if let intId = try? c.decode(Int.self, forKey: .id) {
+            self.id = String(intId)
+        } else if let h = rawHwnd {
+            self.id = String(h)
+        } else {
+            self.id = UUID().uuidString
+        }
+        
+        self.pid = try? c.decode(Int.self, forKey: .pid)
+        self.title = (try? c.decode(String.self, forKey: .title)) ?? ""
+        self.appName = (try? c.decode(String.self, forKey: .appName)) ?? ""
+        self.appIcon = try? c.decode(String.self, forKey: .appIcon)
+        self.displayId = try? c.decode(Int.self, forKey: .displayId)
+        self.bounds = try? c.decode(DisplayRect.self, forKey: .bounds)
+        self.thumbnailBase64 = try? c.decode(String.self, forKey: .thumbnailBase64)
+        self.isFocused = (try? c.decode(Bool.self, forKey: .isFocused)) ?? false
+    }
 }
 
 public enum WindowActionType: String, Codable {

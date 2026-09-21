@@ -193,7 +193,7 @@ public struct WindowsManagerView: View {
     private var quickSplitComboBanner: some View {
         let first = appList[0]
         let second = appList[1]
-        let targetDisplay = displayList.first?.id ?? 6
+        let targetDisplay = displayList.first?.id ?? 0
         
         return Button(action: {
             Haptics.shared.success()
@@ -205,24 +205,25 @@ public struct WindowsManagerView: View {
             }
         }) {
             HStack(spacing: 12) {
-                Image(systemName: "rectangle.split.2x1.fill")
-                    .font(.system(size: 26))
-                    .foregroundColor(.white)
+                HStack(spacing: -8) {
+                    BrandAppIconView(appName: first.appName, size: 36)
+                    BrandAppIconView(appName: second.appName, size: 36)
+                }
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Сплит 50 / 50 в 1 клик")
                         .font(.system(size: 15, weight: .bold))
                         .foregroundColor(.white)
-                    Text("\(first.appName) слева ◧ + \(second.appName) справа ◨ на Экране 1")
+                    Text("\(first.appName) 50% слева + \(second.appName) 50% справа")
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.85))
                 }
                 
                 Spacer()
                 
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.7))
+                Image(systemName: "rectangle.split.2x1.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.white)
             }
             .padding(14)
             .background(Color.pdAccentGradient)
@@ -259,18 +260,9 @@ public struct WindowsManagerView: View {
         let secondaryDisp = displayList.count > 1 ? displayList[1].id : primaryDisp
         
         return VStack(spacing: 10) {
-            // Big App Icon
-            ZStack {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(meta.color)
-                    .frame(width: 64, height: 64)
-                    .shadow(color: meta.color.opacity(0.35), radius: 8, x: 0, y: 4)
-                
-                Image(systemName: meta.icon)
-                    .font(.system(size: 30))
-                    .foregroundColor(.white)
-            }
-            .padding(.top, 6)
+            // Literal Brand App Icon (Discord Clyde mascot, Chrome 3-color pinwheel, etc.)
+            BrandAppIconView(appName: win.appName.isEmpty ? win.title : win.appName, size: 64)
+                .padding(.top, 6)
             
             // App Name
             Text(win.appName.isEmpty ? win.title : win.appName)
