@@ -92,7 +92,7 @@ public final class ConnectionManager: ObservableObject, SignalingClientDelegate 
     }
     
     public func resumeRemoteControl() {
-        if let device = currentDevice {
+        if currentDevice != nil {
             state = .connected
         }
     }

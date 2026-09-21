@@ -83,7 +83,8 @@ public struct PairedDevice: Codable, Identifiable, Equatable {
 }
 
 // QR Code payload decoded during pairing
-public struct QRPairingPayload: Codable {
+public struct QRPairingPayload: Codable, Identifiable {
+    public var id: String { deviceId }
     public let version: Int
     public let deviceId: String
     public let deviceName: String
