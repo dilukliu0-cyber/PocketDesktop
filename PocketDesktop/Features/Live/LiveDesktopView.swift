@@ -96,6 +96,12 @@ public struct LiveDesktopView: View {
             .onDisappear {
                 connection.stopStream()
             }
+            // Restart stream if connection was lost and restored
+            .onChange(of: connection.state) { newState in
+                if newState == .connected && connection.isStreaming == false {
+                    connection.startStream(displayId: currentDisplayId)
+                }
+            }
         }
     }
     

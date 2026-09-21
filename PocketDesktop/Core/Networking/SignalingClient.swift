@@ -13,15 +13,19 @@ public final class SignalingClient: NSObject, URLSessionWebSocketDelegate {
     private var webSocketTask: URLSessionWebSocketTask?
     private var session: URLSession?
     private var pingTimer: Timer?
+    private var pongTimeoutTimer: Timer?
     private var isConnected = false
+    private var lastPongTime: TimeInterval = 0
+    private let pongTimeoutInterval: TimeInterval = 10.0 // Consider connection dead if no pong for 10s
     
     private let queue = DispatchQueue(label: "com.pocketdesktop.signaling", qos: .userInitiated)
     
     public override init() {
         super.init()
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 10.0
-        config.timeoutIntervalForResource = 30.0
+        config.timeoutIntervalForRequest = 30.0  // Increased for local network
+        config.timeoutIntervalForResource = 60.0
+        config.waitsForConnectivity = true       // Wait for network if temporarily unavailable
         self.session = URLSession(configuration: config, delegate: self, delegateQueue: OperationQueue())
     }
     
@@ -36,10 +40,12 @@ public final class SignalingClient: NSObject, URLSessionWebSocketDelegate {
         
         listenForMessages()
         startPingTimer()
+        startPongTimeoutCheck()
     }
     
     public func disconnect() {
         stopPingTimer()
+        stopPongTimeoutCheck()
         webSocketTask?.cancel(with: .normalClosure, reason: nil)
         webSocketTask = nil
         isConnected = false
@@ -90,6 +96,11 @@ public final class SignalingClient: NSObject, URLSessionWebSocketDelegate {
             return
         }
         
+        // Update last pong time for ping/pong messages
+        if pocketMessage.type == .pong {
+            lastPongTime = Date().timeIntervalSince1970
+        }
+        
         DispatchQueue.main.async {
             self.delegate?.signalingDidReceiveMessage(pocketMessage)
         }
@@ -111,9 +122,32 @@ public final class SignalingClient: NSObject, URLSessionWebSocketDelegate {
         pingTimer = nil
     }
     
+    private func startPongTimeoutCheck() {
+        stopPongTimeoutCheck()
+        lastPongTime = Date().timeIntervalSince1970
+        DispatchQueue.main.async {
+            self.pongTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+                guard let self = self else { return }
+                let timeSinceLastPong = Date().timeIntervalSince1970 - self.lastPongTime
+                if timeSinceLastPong > self.pongTimeoutInterval {
+                    // No pong received for too long - connection is dead
+                    DispatchQueue.main.async {
+                        self.delegate?.signalingDidDisconnect(error: NSError(domain: "WebSocket", code: -1, userInfo: [NSLocalizedDescriptionKey: "Pong timeout - connection dead"]))
+                    }
+                }
+            }
+        }
+    }
+    
+    private func stopPongTimeoutCheck() {
+        pongTimeoutTimer?.invalidate()
+        pongTimeoutTimer = nil
+    }
+    
     // URLSessionWebSocketDelegate
     public func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
         isConnected = true
+        lastPongTime = Date().timeIntervalSince1970
         DispatchQueue.main.async {
             self.delegate?.signalingDidConnect()
         }
@@ -121,6 +155,8 @@ public final class SignalingClient: NSObject, URLSessionWebSocketDelegate {
     
     public func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
         isConnected = false
+        stopPingTimer()
+        stopPongTimeoutCheck()
         DispatchQueue.main.async {
             self.delegate?.signalingDidDisconnect(error: nil)
         }

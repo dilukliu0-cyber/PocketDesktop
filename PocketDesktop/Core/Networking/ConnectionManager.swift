@@ -121,7 +121,11 @@ public final class ConnectionManager: ObservableObject, SignalingClientDelegate 
     }
     
     public func signalingDidDisconnect(error: Error?) {
-        if state == .connected {
+        // Stop streaming when disconnected
+        isStreaming = false
+        liveStreamImage = nil  // Clear the stream image to show "waiting" state
+        
+        if state == .connected || state == .reconnecting {
             state = .reconnecting
             attemptReconnect()
         } else {
@@ -131,14 +135,14 @@ public final class ConnectionManager: ObservableObject, SignalingClientDelegate 
     }
     
     private func attemptReconnect() {
-        guard reconnectAttempts < 5 else {
+        guard reconnectAttempts < 10 else {  // Increased from 5 to 10 attempts
             state = .offline
             reconnectAttempts = 0
             return
         }
         
         reconnectAttempts += 1
-        let delay = Double(min(reconnectAttempts * 2, 8))
+        let delay = Double(min(reconnectAttempts * 2, 10))  // Max 10s delay
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             guard let self = self, self.state == .reconnecting else { return }
             if let device = self.currentDevice {
@@ -155,6 +159,11 @@ public final class ConnectionManager: ObservableObject, SignalingClientDelegate 
                 self.reconnectAttempts = 0
                 Haptics.shared.success()
                 self.requestInitialData()
+                
+                // Auto-restart stream if it was active before disconnect
+                if self.isStreaming {
+                    self.startStream(displayId: self.selectedDisplayId)
+                }
             }
             
         case .authRevoked:
