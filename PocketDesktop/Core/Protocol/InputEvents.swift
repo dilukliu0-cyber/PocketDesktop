@@ -69,6 +69,7 @@ public enum KeyboardActionType: String, Codable {
 public struct KeyboardInputPayload: Codable {
     public let action: KeyboardActionType
     public let text: String?
+    public let key: String?
     public let keyCode: String?         // "Escape", "Tab", "ArrowUp", "ArrowDown", etc.
     public let modifiers: KeyboardModifierFlags
     public let shortcut: String?        // "copy", "paste", "undo", "redo", "selectAll"
@@ -76,13 +77,15 @@ public struct KeyboardInputPayload: Codable {
     public init(
         action: KeyboardActionType,
         text: String? = nil,
+        key: String? = nil,
         keyCode: String? = nil,
         modifiers: KeyboardModifierFlags = [],
         shortcut: String? = nil
     ) {
         self.action = action
         self.text = text
-        self.keyCode = keyCode
+        self.key = key ?? keyCode
+        self.keyCode = keyCode ?? key
         self.modifiers = modifiers
         self.shortcut = shortcut
     }
@@ -90,21 +93,52 @@ public struct KeyboardInputPayload: Codable {
 
 public enum MediaCommandType: String, Codable {
     case playPause = "play_pause"
+    case stop = "stop"
     case next = "next"
     case previous = "previous"
+    case forward10 = "forward_10"
+    case rewind10 = "rewind_10"
     case volumeUp = "volume_up"
     case volumeDown = "volume_down"
     case setVolume = "set_volume"
     case muteToggle = "mute_toggle"
+    case setRate = "set_rate"
 }
 
 public struct MediaControlPayload: Codable {
     public let command: MediaCommandType
     public let volumeLevel: Float? // 0.0 ... 1.0
+    public let rate: Float?
     
-    public init(command: MediaCommandType, volumeLevel: Float? = nil) {
+    public init(command: MediaCommandType, volumeLevel: Float? = nil, rate: Float? = nil) {
         self.command = command
         self.volumeLevel = volumeLevel
+        self.rate = rate
+    }
+}
+
+public struct MediaStatusPayload: Codable {
+    public let title: String?
+    public let artist: String?
+    public let isPlaying: Bool
+    public let duration: Double?
+    public let position: Double?
+    public let rate: Float?
+    
+    public init(
+        title: String? = nil,
+        artist: String? = nil,
+        isPlaying: Bool = false,
+        duration: Double? = nil,
+        position: Double? = nil,
+        rate: Float? = 1.0
+    ) {
+        self.title = title
+        self.artist = artist
+        self.isPlaying = isPlaying
+        self.duration = duration
+        self.position = position
+        self.rate = rate
     }
 }
 

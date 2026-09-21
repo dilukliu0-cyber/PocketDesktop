@@ -1,27 +1,77 @@
 import Foundation
 
+// MARK: - Physical Displays & Geometry
+
+public struct DisplayRect: Codable, Equatable {
+    public let x: Double
+    public let y: Double
+    public let width: Double
+    public let height: Double
+    
+    public init(x: Double = 0, y: Double = 0, width: Double = 1920, height: Double = 1080) {
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+    }
+}
+
+public struct DisplayItem: Codable, Identifiable, Equatable {
+    public let id: Int
+    public let name: String
+    public let isPrimary: Bool
+    public let bounds: DisplayRect
+    public let workArea: DisplayRect
+    
+    public init(
+        id: Int,
+        name: String,
+        isPrimary: Bool = false,
+        bounds: DisplayRect = DisplayRect(),
+        workArea: DisplayRect = DisplayRect()
+    ) {
+        self.id = id
+        self.name = name
+        self.isPrimary = isPrimary
+        self.bounds = bounds
+        self.workArea = workArea
+    }
+}
+
 // MARK: - Simplified Desktop Models
 
 public struct DesktopWindow: Codable, Identifiable, Equatable {
     public let id: String
+    public let hwnd: Int?
+    public let pid: Int?
     public let title: String
     public let appName: String
-    public let appIcon: String
+    public var appIcon: String?
+    public var displayId: Int?
+    public var bounds: DisplayRect?
     public let thumbnailBase64: String?
-    public var isFocused: Bool
+    public var isFocused: Bool?
     
     public init(
         id: String = UUID().uuidString,
+        hwnd: Int? = nil,
+        pid: Int? = nil,
         title: String,
         appName: String,
-        appIcon: String = "app.window.fill",
+        appIcon: String? = "app.window.fill",
+        displayId: Int? = nil,
+        bounds: DisplayRect? = nil,
         thumbnailBase64: String? = nil,
         isFocused: Bool = false
     ) {
         self.id = id
+        self.hwnd = hwnd
+        self.pid = pid
         self.title = title
         self.appName = appName
         self.appIcon = appIcon
+        self.displayId = displayId
+        self.bounds = bounds
         self.thumbnailBase64 = thumbnailBase64
         self.isFocused = isFocused
     }
@@ -41,6 +91,48 @@ public struct WindowActionPayload: Codable {
     public init(windowId: String, action: WindowActionType) {
         self.windowId = windowId
         self.action = action
+    }
+}
+
+public struct WindowMovePayload: Codable {
+    public let windowId: String
+    public let displayId: Int
+    public let zone: String // "left", "right", "full"
+    
+    public init(windowId: String, displayId: Int, zone: String) {
+        self.windowId = windowId
+        self.displayId = displayId
+        self.zone = zone
+    }
+}
+
+// MARK: - Live Stream Models
+
+public struct StreamControlPayload: Codable {
+    public let displayId: Int?
+    public let fps: Int?
+    public let quality: Int?
+    
+    public init(displayId: Int? = nil, fps: Int? = 20, quality: Int? = 65) {
+        self.displayId = displayId
+        self.fps = fps
+        self.quality = quality
+    }
+}
+
+public struct StreamFramePayload: Codable {
+    public let displayId: Int
+    public let frameBase64: String
+    public let width: Int
+    public let height: Int
+    public let timestamp: Double
+    
+    public init(displayId: Int, frameBase64: String, width: Int, height: Int, timestamp: Double) {
+        self.displayId = displayId
+        self.frameBase64 = frameBase64
+        self.width = width
+        self.height = height
+        self.timestamp = timestamp
     }
 }
 

@@ -3,171 +3,358 @@ import SwiftUI
 public struct HomeView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var connection = ConnectionManager.shared
-    @ObservedObject private var latency = LatencyMonitor.shared
     
-    @State private var showingDeviceSwitcher = false
+    // Trackpad gesture state
+    @State private var lastDragLocation: CGPoint? = nil
+    @State private var isDraggingMouse: Bool = false
+    @State private var sensitivity: Double = 1.35
+    
+    // Media speed pills
+    @State private var selectedSpeed: Float = 1.0
+    private let speedOptions: [Float] = [1.0, 1.25, 1.5, 2.0]
+    
+    // Navigation sheets
+    @State private var showingSettings = false
+    @State private var showingKeyboard = false
+    @State private var showingStream = false
+    @State private var showingWindows = false
     
     public init() {}
     
     public var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Top App Header
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Pocket Desktop")
-                                .font(.system(size: 28, weight: .bold, design: .rounded))
-                                .foregroundColor(.pdPrimaryText)
-                            Text("Your computer in your pocket")
-                                .font(.system(size: 14))
-                                .foregroundColor(.pdSecondaryText)
-                        }
-                        
-                        Spacer()
-                        
-                        Button(action: {
-                            showingDeviceSwitcher = true
-                        }) {
-                            Image(systemName: "laptopcomputer.and.iphone")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(.pdPrimaryText)
-                                .padding(10)
-                                .background(Circle().fill(Color.pdElevatedCard))
-                                .overlay(Circle().stroke(Color.pdBorder, lineWidth: 1))
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
-                    
-                    // Main Device Card
-                    DeviceCard(
-                        device: connection.currentDevice,
-                        connectionState: connection.state,
-                        latencyMs: latency.currentLatencyMs,
-                        onSwitchDevice: { showingDeviceSwitcher = true },
-                        onStartRemote: { appState.selectedTab = .desktop }
-                    )
-                    .padding(.horizontal, 20)
-                    
-                    // Quick Action Tiles [ Desktop ] [ Browser ] [ Files ] [ Keyboard ]
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Quick Actions")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(.pdPrimaryText)
-                            .padding(.horizontal, 20)
-                        
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
-                            quickTile(title: "Desktop", icon: "macwindow", color: .pdAccentBlue) {
-                                appState.selectedTab = .desktop
-                            }
-                            quickTile(title: "Browser", icon: "safari.fill", color: .pdAccentViolet) {
-                                appState.selectedTab = .browser
-                            }
-                            quickTile(title: "Files", icon: "folder.fill", color: .pdWarningAmber) {
-                                appState.activeToolSheet = .files
-                            }
-                            quickTile(title: "Keyboard", icon: "keyboard.fill", color: .pdOnlineGreen) {
-                                appState.activeToolSheet = .keyboard
-                            }
-                        }
+            ZStack {
+                Color.pdBackground.ignoresSafeArea()
+                
+                VStack(spacing: 12) {
+                    // 1. TOP HEADER: PocketDesktop ● ПК подключен [⚙️]
+                    headerView
                         .padding(.horizontal, 20)
-                    }
+                        .padding(.top, 10)
                     
-                    // Recent Apps Section
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Text("Recent Apps")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.pdPrimaryText)
-                            Spacer()
-                            Button(action: {
-                                appState.activeToolSheet = .apps
-                            }) {
-                                Text("See All")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.pdAccentBlue)
-                            }
-                        }
+                    // 2. MEDIA CONTROL BAR
+                    mediaControlBar
                         .padding(.horizontal, 20)
-                        
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 14) {
-                                ForEach(connection.runningApps.prefix(4)) { app in
-                                    recentAppCard(app)
-                                }
-                            }
-                            .padding(.horizontal, 20)
-                        }
-                    }
+                    
+                    // 3. BIG TRACKPAD SURFACE (60-70% height)
+                    trackpadSurfaceView
+                        .padding(.horizontal, 20)
+                    
+                    // 4. BOTTOM 3 ACTION BUTTONS: [ Клавиатура ] [ Стрим ] [ Окна ]
+                    bottomNavigationButtons
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 12)
                 }
-                .padding(.bottom, 32)
             }
-            .background(Color.pdBackground.ignoresSafeArea())
-            .sheet(isPresented: $showingDeviceSwitcher) {
-                DeviceSwitcherView()
+            .navigationBarHidden(true)
+            .sheet(isPresented: $showingSettings) {
+                SettingsView()
+                    .environmentObject(appState)
+            }
+            .sheet(isPresented: $showingKeyboard) {
+                KeyboardView()
+            }
+            .fullScreenCover(isPresented: $showingStream) {
+                LiveDesktopView()
+            }
+            .sheet(isPresented: $showingWindows) {
+                WindowsManagerView()
+            }
+            .onAppear {
+                connection.requestDisplays()
+                connection.requestWindows()
             }
         }
     }
     
-    private func quickTile(title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
-        Button(action: {
-            Haptics.shared.click()
-            action()
-        }) {
-            GlassCard(cornerRadius: 18, padding: 16) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Circle()
-                        .fill(color.opacity(0.15))
-                        .frame(width: 40, height: 40)
-                        .overlay(
-                            Image(systemName: icon)
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(color)
-                        )
-                    
-                    Text(title)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.pdPrimaryText)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+    // MARK: - 1. Header View
+    private var headerView: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("PocketDesktop")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundColor(.pdPrimaryText)
+            }
+            
+            Spacer()
+            
+            // Connection Status Dot & Label
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 8, height: 8)
+                Text(statusText)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(statusColor)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Capsule().fill(statusColor.opacity(0.12)))
+            
+            // Settings Button
+            Button(action: {
+                Haptics.shared.click()
+                showingSettings = true
+            }) {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(.pdSecondaryText)
+                    .padding(8)
+                    .background(Circle().fill(Color.pdElevatedCard))
             }
         }
-        .buttonStyle(ScaleTouchButtonStyle())
     }
     
-    private func recentAppCard(_ app: DesktopApp) -> some View {
-        Button(action: {
-            connection.launchApp(app)
-        }) {
-            GlassCard(cornerRadius: 18, padding: 14) {
-                VStack(spacing: 8) {
-                    ZStack(alignment: .topTrailing) {
-                        Circle()
-                            .fill(Color.pdElevatedCard)
-                            .frame(width: 48, height: 48)
-                            .overlay(
-                                Image(systemName: app.systemIconName)
-                                    .font(.system(size: 22))
-                                    .foregroundColor(.pdAccentBlue)
+    private var statusColor: Color {
+        switch connection.state {
+        case .connected: return .pdOnlineGreen
+        case .connecting, .authenticating, .reconnecting: return .pdWarningAmber
+        default: return .pdSecondaryText
+        }
+    }
+    
+    private var statusText: String {
+        switch connection.state {
+        case .connected: return "ПК подключен"
+        case .connecting, .authenticating: return "Подключение..."
+        case .reconnecting: return "Переподключение"
+        default: return "Отключен"
+        }
+    }
+    
+    // MARK: - 2. Media Control Bar
+    private var mediaControlBar: some View {
+        VStack(spacing: 8) {
+            // Transport buttons: << -10s, Play/Pause, Stop, >> +10s
+            HStack(spacing: 20) {
+                // Rewind 10s
+                Button(action: {
+                    connection.performMediaCommand(.rewind10)
+                }) {
+                    HStack(spacing: 2) {
+                        Image(systemName: "gobackward.10")
+                            .font(.system(size: 18, weight: .semibold))
+                    }
+                    .foregroundColor(.pdPrimaryText)
+                }
+                
+                Spacer()
+                
+                // Play / Pause Toggle
+                Button(action: {
+                    connection.performMediaCommand(.playPause)
+                }) {
+                    Image(systemName: connection.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                        .font(.system(size: 38))
+                        .foregroundColor(.pdAccentBlue)
+                }
+                
+                Spacer()
+                
+                // Stop Button
+                Button(action: {
+                    connection.performMediaCommand(.stop)
+                }) {
+                    Image(systemName: "stop.circle.fill")
+                        .font(.system(size: 26))
+                        .foregroundColor(.pdSecondaryText)
+                }
+                
+                Spacer()
+                
+                // Forward 10s
+                Button(action: {
+                    connection.performMediaCommand(.forward10)
+                }) {
+                    HStack(spacing: 2) {
+                        Image(systemName: "goforward.10")
+                            .font(.system(size: 18, weight: .semibold))
+                    }
+                    .foregroundColor(.pdPrimaryText)
+                }
+            }
+            .padding(.horizontal, 12)
+            
+            // Scrubber Slider
+            HStack(spacing: 8) {
+                Text("01:14")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(.pdSecondaryText)
+                
+                Slider(value: $connection.mediaProgress, in: 0...1)
+                    .tint(.pdAccentBlue)
+                
+                Text("04:30")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(.pdSecondaryText)
+            }
+            
+            // Speed Pills: 1x, 1.25x, 1.5x, 2x
+            HStack(spacing: 10) {
+                ForEach(speedOptions, id: \.self) { speed in
+                    let isSelected = selectedSpeed == speed
+                    Button(action: {
+                        Haptics.shared.select()
+                        selectedSpeed = speed
+                        connection.performMediaCommand(.setRate, rate: speed)
+                    }) {
+                        Text("\(String(format: "%g", speed))x")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(isSelected ? .white : .pdSecondaryText)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(isSelected ? Color.pdAccentBlue : Color.pdElevatedCard)
                             )
-                        
-                        if app.isRunning {
-                            Circle()
-                                .fill(Color.pdOnlineGreen)
-                                .frame(width: 10, height: 10)
-                                .overlay(Circle().stroke(Color.pdCardBackground, lineWidth: 2))
-                        }
                     }
-                    
-                    Text(app.name)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.pdPrimaryText)
-                        .lineLimit(1)
                 }
-                .frame(width: 90)
             }
         }
-        .buttonStyle(ScaleTouchButtonStyle())
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.pdCardBackground)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.pdBorder, lineWidth: 1)
+        )
+    }
+    
+    // MARK: - 3. Massive Trackpad Surface
+    private var trackpadSurfaceView: some View {
+        GeometryReader { _ in
+            ZStack {
+                // Background Trackpad Tile
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(Color.pdElevatedCard)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .stroke(Color.pdBorder, lineWidth: 1)
+                    )
+                
+                // Trackpad Label & Gestures Info
+                VStack(spacing: 8) {
+                    Image(systemName: "hand.draw")
+                        .font(.system(size: 42))
+                        .foregroundColor(.pdSecondaryText.opacity(0.35))
+                    
+                    Text("Тачпад")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundColor(.pdPrimaryText.opacity(0.6))
+                    
+                    Text("1 палец: курсор • Тап: ЛКМ")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.pdSecondaryText.opacity(0.7))
+                    
+                    Text("2 пальца: скролл / ПКМ • Удержание: Drag")
+                        .font(.system(size: 11))
+                        .foregroundColor(.pdSecondaryText.opacity(0.6))
+                }
+            }
+            .contentShape(Rectangle())
+            // 1. Mouse Drag & Movement Gesture (differential delta tracking)
+            .gesture(
+                DragGesture(minimumDistance: 1)
+                    .onChanged { val in
+                        if let last = lastDragLocation {
+                            let rawDx = Double(val.location.x - last.x)
+                            let rawDy = Double(val.location.y - last.y)
+                            
+                            // Apply sensitivity and acceleration
+                            let speed = hypot(rawDx, rawDy)
+                            let accel = max(1.0, min(2.5, speed * 0.1))
+                            let dx = rawDx * sensitivity * accel
+                            let dy = rawDy * sensitivity * accel
+                            
+                            connection.sendMouseMove(dx: dx, dy: dy)
+                        }
+                        lastDragLocation = val.location
+                    }
+                    .onEnded { _ in
+                        lastDragLocation = nil
+                        if isDraggingMouse {
+                            connection.sendMouseUp(button: .left)
+                            isDraggingMouse = false
+                        }
+                    }
+            )
+            // 2. Tap for Left Click
+            .onTapGesture(count: 1) {
+                Haptics.shared.click()
+                connection.sendMouseClick(button: .left)
+            }
+            // 3. Double Tap for Double Click
+            .onTapGesture(count: 2) {
+                Haptics.shared.click()
+                connection.sendMouseClick(button: .left, double: true)
+            }
+            // 4. Long Press for Mouse Drag Start
+            .onLongPressGesture(minimumDuration: 0.35) {
+                Haptics.shared.warning()
+                isDraggingMouse = true
+                connection.sendMouseDown(button: .left)
+            }
+        }
+        .frame(maxHeight: .infinity)
+    }
+    
+    // MARK: - 4. Bottom 3 Big Navigation Buttons
+    private var bottomNavigationButtons: some View {
+        HStack(spacing: 12) {
+            // [ Клавиатура ]
+            Button(action: {
+                Haptics.shared.click()
+                showingKeyboard = true
+            }) {
+                VStack(spacing: 6) {
+                    Image(systemName: "keyboard.fill")
+                        .font(.system(size: 20))
+                    Text("Клавиатура")
+                        .font(.system(size: 13, weight: .bold))
+                }
+                .foregroundColor(.pdPrimaryText)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(RoundedRectangle(cornerRadius: 16).fill(Color.pdCardBackground))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.pdBorder, lineWidth: 1))
+            }
+            
+            // [ Стрим ]
+            Button(action: {
+                Haptics.shared.click()
+                showingStream = true
+            }) {
+                VStack(spacing: 6) {
+                    Image(systemName: "display")
+                        .font(.system(size: 20))
+                    Text("Стрим")
+                        .font(.system(size: 13, weight: .bold))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(RoundedRectangle(cornerRadius: 16).fill(Color.pdAccentBlue))
+            }
+            
+            // [ Окна ]
+            Button(action: {
+                Haptics.shared.click()
+                showingWindows = true
+            }) {
+                VStack(spacing: 6) {
+                    Image(systemName: "macwindow.on.rectangle")
+                        .font(.system(size: 20))
+                    Text("Окна")
+                        .font(.system(size: 13, weight: .bold))
+                }
+                .foregroundColor(.pdPrimaryText)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(RoundedRectangle(cornerRadius: 16).fill(Color.pdCardBackground))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.pdBorder, lineWidth: 1))
+            }
+        }
     }
 }

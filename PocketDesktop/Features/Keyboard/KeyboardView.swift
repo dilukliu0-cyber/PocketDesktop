@@ -67,6 +67,11 @@ public struct KeyboardView: View {
                                 keyButton(icon: "arrow.up") { sendSpecialKey("ArrowUp") }
                                 keyButton(icon: "arrow.down") { sendSpecialKey("ArrowDown") }
                                 keyButton(icon: "arrow.right") { sendSpecialKey("ArrowRight") }
+                                keyButton(label: "Enter", icon: "return") { sendSpecialKey("Enter") }
+                                keyButton(label: "⌫", icon: "delete.left") { sendSpecialKey("Backspace") }
+                                keyButton(label: "Del") { sendSpecialKey("Delete") }
+                                keyButton(label: "Win+D") { sendShortcut("win_d") }
+                                keyButton(label: "Alt+Tab") { sendShortcut("alt_tab") }
                             }
                             .padding(.horizontal, 16)
                         }
@@ -89,7 +94,7 @@ public struct KeyboardView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Готово") { dismiss() }
                 }
             }
             .onAppear {
@@ -155,26 +160,14 @@ public struct KeyboardView: View {
     }
     
     private func transmitText(_ text: String) {
-        WebRTCManager.shared.sendKeyboard(KeyboardInputPayload(
-            action: .text,
-            text: text,
-            modifiers: activeModifiers
-        ))
+        ConnectionManager.shared.sendKeyText(text)
     }
     
     private func sendSpecialKey(_ key: String) {
-        WebRTCManager.shared.sendKeyboard(KeyboardInputPayload(
-            action: .keyPress,
-            keyCode: key,
-            modifiers: activeModifiers
-        ))
+        ConnectionManager.shared.sendKeyPress(key, modifiers: activeModifiers)
     }
     
     private func sendShortcut(_ shortcut: String) {
-        WebRTCManager.shared.sendKeyboard(KeyboardInputPayload(
-            action: .shortcut,
-            modifiers: activeModifiers,
-            shortcut: shortcut
-        ))
+        ConnectionManager.shared.sendShortcut(shortcut, modifiers: activeModifiers)
     }
 }

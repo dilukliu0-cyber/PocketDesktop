@@ -17,10 +17,18 @@ public enum PocketMessageType: String, Codable {
     case pong = "pong"
     case deviceStatus = "device_status"
     
-    // Desktop & Windows
+    // Desktop, Displays & Windows
+    case getDisplays = "get_displays"
+    case displaysList = "displays_list"
     case getWindows = "get_windows"
     case windowsList = "windows_list"
     case windowAction = "window_action"
+    case windowMove = "window_move"
+    
+    // Live Stream
+    case streamStart = "stream_start"
+    case streamStop = "stream_stop"
+    case streamFrame = "stream_frame"
     
     // Browser Controller
     case getBrowserTabs = "get_browser_tabs"
@@ -42,6 +50,7 @@ public enum PocketMessageType: String, Codable {
     case mouseInput = "mouse_input"
     case keyboardInput = "keyboard_input"
     case mediaControl = "media_control"
+    case mediaStatus = "media_status"
     case systemCommand = "system_command"
     
     // Screenshot

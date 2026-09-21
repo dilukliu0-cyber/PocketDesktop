@@ -17,6 +17,10 @@ public final class ConnectionManager: ObservableObject, SignalingClientDelegate 
     
     @Published public var state: ConnectionState = .disconnected
     @Published public var currentDevice: PairedDevice?
+    @Published public var displays: [DisplayItem] = []
+    @Published public var selectedDisplayId: Int = 0
+    @Published public var liveStreamImage: UIImage?
+    @Published public var isStreaming: Bool = false
     @Published public var openWindows: [DesktopWindow] = []
     @Published public var runningApps: [DesktopApp] = []
     @Published public var browserTabs: [BrowserTab] = []
@@ -26,6 +30,10 @@ public final class ConnectionManager: ObservableObject, SignalingClientDelegate 
     @Published public var volumeLevel: Float = 0.65
     @Published public var isMuted: Bool = false
     @Published public var isDemoMode: Bool = false
+    @Published public var mediaStatus: MediaStatusPayload?
+    @Published public var isPlaying: Bool = false
+    @Published public var playbackRate: Float = 1.0
+    @Published public var mediaProgress: Double = 0.28
     
     private let signalingClient = SignalingClient()
     private var reconnectAttempts: Int = 0
@@ -142,44 +150,87 @@ public final class ConnectionManager: ObservableObject, SignalingClientDelegate 
     public func signalingDidReceiveMessage(_ message: PocketMessage) {
         switch message.type {
         case .authSuccess:
-            state = .connected
-            reconnectAttempts = 0
-            Haptics.shared.success()
-            WebRTCManager.shared.startSession()
-            requestInitialData()
+            DispatchQueue.main.async {
+                self.state = .connected
+                self.reconnectAttempts = 0
+                Haptics.shared.success()
+                self.requestInitialData()
+            }
             
         case .authRevoked:
-            disconnect()
-            if let id = currentDevice?.id {
-                DeviceRepository.shared.removeDevice(id: id)
+            DispatchQueue.main.async {
+                self.disconnect()
+                if let id = self.currentDevice?.id {
+                    DeviceRepository.shared.removeDevice(id: id)
+                }
             }
             
         case .pong:
             LatencyMonitor.shared.recordPongReceived(id: message.id)
             
+        case .displaysList:
+            if let displays = message.decodePayload([DisplayItem].self) {
+                DispatchQueue.main.async {
+                    self.displays = displays
+                    if self.selectedDisplayId == 0, let first = displays.first {
+                        self.selectedDisplayId = first.id
+                    }
+                }
+            }
+            
         case .windowsList:
             if let windows = message.decodePayload([DesktopWindow].self) {
-                self.openWindows = windows
+                DispatchQueue.main.async {
+                    self.openWindows = windows
+                }
+            }
+            
+        case .streamFrame:
+            if let frame = message.decodePayload(StreamFramePayload.self),
+               let data = Data(base64Encoded: frame.frameBase64),
+               let img = UIImage(data: data) {
+                DispatchQueue.main.async {
+                    self.liveStreamImage = img
+                }
+            }
+            
+        case .mediaStatus:
+            if let status = message.decodePayload(MediaStatusPayload.self) {
+                DispatchQueue.main.async {
+                    self.mediaStatus = status
+                    self.isPlaying = status.isPlaying
+                    if let rate = status.rate {
+                        self.playbackRate = rate
+                    }
+                }
             }
             
         case .appsList:
             if let apps = message.decodePayload([DesktopApp].self) {
-                self.runningApps = apps
+                DispatchQueue.main.async {
+                    self.runningApps = apps
+                }
             }
             
         case .browserTabsList:
             if let tabs = message.decodePayload([BrowserTab].self) {
-                self.browserTabs = tabs
+                DispatchQueue.main.async {
+                    self.browserTabs = tabs
+                }
             }
             
         case .filesList:
             if let files = message.decodePayload([FileItem].self) {
-                self.currentFiles = files
+                DispatchQueue.main.async {
+                    self.currentFiles = files
+                }
             }
             
         case .screenshotData:
             if let data = message.payload, let img = UIImage(data: data) {
-                self.lastScreenshotImage = img
+                DispatchQueue.main.async {
+                    self.lastScreenshotImage = img
+                }
             }
             
         default:
@@ -190,16 +241,98 @@ public final class ConnectionManager: ObservableObject, SignalingClientDelegate 
     // MARK: - Actions
     
     public func requestInitialData() {
+        sendMessage(.getDisplays)
         sendMessage(.getWindows)
-        sendMessage(.getApps)
-        sendMessage(.getBrowserTabs)
-        sendMessage(.getFiles)
     }
     
     public func sendMessage(_ type: PocketMessageType) {
         let msg = PocketMessage(type: type)
         if !isDemoMode {
             signalingClient.send(message: msg)
+        }
+    }
+    
+    // MARK: - Native Mouse Input via Active WebSocket
+    
+    public func sendMouseMove(dx: Double, dy: Double) {
+        let payload = MouseInputPayload(action: .move, deltaX: dx, deltaY: dy)
+        if let msg = PocketMessage.make(type: .mouseInput, data: payload) {
+            if !isDemoMode { signalingClient.send(message: msg) }
+        }
+    }
+    
+    public func sendMouseSet(x: Double, y: Double) {
+        let payload = MouseInputPayload(action: .move, x: x, y: y)
+        if let msg = PocketMessage.make(type: .mouseInput, data: payload) {
+            if !isDemoMode { signalingClient.send(message: msg) }
+        }
+    }
+    
+    public func sendMouseClick(button: MouseButton = .left, double: Bool = false) {
+        let action: MouseActionType = double ? .doubleClick : (button == .right ? .rightClick : .click)
+        let payload = MouseInputPayload(action: action, button: button)
+        if let msg = PocketMessage.make(type: .mouseInput, data: payload) {
+            if !isDemoMode { signalingClient.send(message: msg) }
+        }
+    }
+    
+    public func sendMouseDown(button: MouseButton = .left) {
+        let payload = MouseInputPayload(action: .down, button: button)
+        if let msg = PocketMessage.make(type: .mouseInput, data: payload) {
+            if !isDemoMode { signalingClient.send(message: msg) }
+        }
+    }
+    
+    public func sendMouseUp(button: MouseButton = .left) {
+        let payload = MouseInputPayload(action: .up, button: button)
+        if let msg = PocketMessage.make(type: .mouseInput, data: payload) {
+            if !isDemoMode { signalingClient.send(message: msg) }
+        }
+    }
+    
+    public func sendMouseScroll(deltaY: Double) {
+        let payload = MouseInputPayload(action: .scroll, scrollDeltaY: deltaY)
+        if let msg = PocketMessage.make(type: .mouseInput, data: payload) {
+            if !isDemoMode { signalingClient.send(message: msg) }
+        }
+    }
+    
+    // MARK: - Native Keyboard Input via Active WebSocket
+    
+    public func sendKeyText(_ text: String) {
+        let payload = KeyboardInputPayload(action: .text, text: text)
+        if let msg = PocketMessage.make(type: .keyboardInput, data: payload) {
+            if !isDemoMode { signalingClient.send(message: msg) }
+        }
+    }
+    
+    public func sendKeyPress(_ key: String, modifiers: KeyboardModifierFlags = []) {
+        let payload = KeyboardInputPayload(action: .keyPress, key: key, keyCode: key, modifiers: modifiers)
+        if let msg = PocketMessage.make(type: .keyboardInput, data: payload) {
+            if !isDemoMode { signalingClient.send(message: msg) }
+        }
+    }
+    
+    public func sendShortcut(_ shortcut: String, modifiers: KeyboardModifierFlags = []) {
+        let payload = KeyboardInputPayload(action: .shortcut, modifiers: modifiers, shortcut: shortcut)
+        if let msg = PocketMessage.make(type: .keyboardInput, data: payload) {
+            if !isDemoMode { signalingClient.send(message: msg) }
+        }
+    }
+    
+    // MARK: - Window Snapping & Physical Display Routing
+    
+    public func sendWindowMove(windowId: String, displayId: Int, zone: String) {
+        Haptics.shared.click()
+        let payload = WindowMovePayload(windowId: windowId, displayId: displayId, zone: zone)
+        if let msg = PocketMessage.make(type: .windowMove, data: payload) {
+            if !isDemoMode { signalingClient.send(message: msg) }
+        }
+        // Optimistically update
+        DispatchQueue.main.async {
+            if let idx = self.openWindows.firstIndex(where: { $0.id == windowId }) {
+                self.openWindows[idx].displayId = displayId
+            }
         }
     }
     
@@ -212,7 +345,6 @@ public final class ConnectionManager: ObservableObject, SignalingClientDelegate 
             }
         }
         
-        // Optimistic UI updates
         switch action {
         case .close:
             openWindows.removeAll(where: { $0.id == windowId })
@@ -224,6 +356,52 @@ public final class ConnectionManager: ObservableObject, SignalingClientDelegate 
             openWindows.removeAll(where: { $0.id == windowId })
         case .maximize:
             break
+        }
+    }
+    
+    // MARK: - Live Screen Stream Control
+    
+    public func startStream(displayId: Int? = nil, fps: Int = 20, quality: Int = 65) {
+        let targetId = displayId ?? selectedDisplayId
+        self.selectedDisplayId = targetId
+        self.isStreaming = true
+        let payload = StreamControlPayload(displayId: targetId, fps: fps, quality: quality)
+        if let msg = PocketMessage.make(type: .streamStart, data: payload) {
+            if !isDemoMode { signalingClient.send(message: msg) }
+        }
+    }
+    
+    public func stopStream() {
+        self.isStreaming = false
+        sendMessage(.streamStop)
+    }
+    
+    public func requestDisplays() {
+        sendMessage(.getDisplays)
+    }
+    
+    public func requestWindows() {
+        sendMessage(.getWindows)
+    }
+    
+    // MARK: - Media Controls
+    
+    public func performMediaCommand(_ command: MediaCommandType, volume: Float? = nil, rate: Float? = nil) {
+        Haptics.shared.click()
+        if let v = volume {
+            self.volumeLevel = v
+        }
+        if let r = rate {
+            self.playbackRate = r
+        }
+        if command == .playPause {
+            self.isPlaying.toggle()
+        }
+        let payload = MediaControlPayload(command: command, volumeLevel: volumeLevel, rate: rate ?? playbackRate)
+        if let msg = PocketMessage.make(type: .mediaControl, data: payload) {
+            if !isDemoMode {
+                signalingClient.send(message: msg)
+            }
         }
     }
     
@@ -239,19 +417,6 @@ public final class ConnectionManager: ObservableObject, SignalingClientDelegate 
     public func launchApp(_ app: DesktopApp) {
         Haptics.shared.click()
         if let msg = PocketMessage.make(type: .launchApp, data: ["appId": app.id, "path": app.executablePath]) {
-            if !isDemoMode {
-                signalingClient.send(message: msg)
-            }
-        }
-    }
-    
-    public func performMediaCommand(_ command: MediaCommandType, volume: Float? = nil) {
-        Haptics.shared.click()
-        if let v = volume {
-            self.volumeLevel = v
-        }
-        let payload = MediaControlPayload(command: command, volumeLevel: volumeLevel)
-        if let msg = PocketMessage.make(type: .mediaControl, data: payload) {
             if !isDemoMode {
                 signalingClient.send(message: msg)
             }

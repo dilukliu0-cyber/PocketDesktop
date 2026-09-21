@@ -11,6 +11,8 @@ public struct TrackpadView: View {
     @State private var tapToClick: Bool = true
     @State private var hapticClicks: Bool = true
     
+    @State private var lastLocation: CGPoint? = nil
+    
     public init() {}
     
     public var body: some View {
@@ -57,7 +59,7 @@ public struct TrackpadView: View {
                                 .font(.system(size: 40))
                                 .foregroundColor(.pdSecondaryText.opacity(0.4))
                             
-                            Text("Swipe  •  Tap  •  Pinch  •  Scroll")
+                            Text("1 палец: курсор • Тап: ЛКМ")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(.pdSecondaryText.opacity(0.7))
                         }
@@ -66,19 +68,21 @@ public struct TrackpadView: View {
                     .gesture(
                         DragGesture(minimumDistance: 1)
                             .onChanged { val in
-                                let deltaX = val.translation.width * sensitivity
-                                let deltaY = val.translation.height * sensitivity
-                                WebRTCManager.shared.sendInput(MouseInputPayload(
-                                    action: .move,
-                                    deltaX: deltaX,
-                                    deltaY: deltaY
-                                ))
+                                if let last = lastLocation {
+                                    let dx = Double(val.location.x - last.x) * sensitivity
+                                    let dy = Double(val.location.y - last.y) * sensitivity
+                                    connection.sendMouseMove(dx: dx, dy: dy)
+                                }
+                                lastLocation = val.location
+                            }
+                            .onEnded { _ in
+                                lastLocation = nil
                             }
                     )
                     .onTapGesture {
                         if tapToClick {
                             if hapticClicks { Haptics.shared.click() }
-                            WebRTCManager.shared.sendInput(MouseInputPayload(action: .click, button: .left))
+                            connection.sendMouseClick(button: .left)
                         }
                     }
                     
@@ -86,9 +90,9 @@ public struct TrackpadView: View {
                     HStack(spacing: 14) {
                         Button(action: {
                             if hapticClicks { Haptics.shared.click() }
-                            WebRTCManager.shared.sendInput(MouseInputPayload(action: .click, button: .left))
+                            connection.sendMouseClick(button: .left)
                         }) {
-                            Text("Left Click")
+                            Text("ЛКМ")
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundColor(.pdPrimaryText)
                                 .frame(maxWidth: .infinity)
@@ -99,9 +103,9 @@ public struct TrackpadView: View {
                         
                         Button(action: {
                             if hapticClicks { Haptics.shared.click() }
-                            WebRTCManager.shared.sendInput(MouseInputPayload(action: .rightClick, button: .right))
+                            connection.sendMouseClick(button: .right)
                         }) {
-                            Text("Right Click")
+                            Text("ПКМ")
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundColor(.pdPrimaryText)
                                 .frame(maxWidth: .infinity)

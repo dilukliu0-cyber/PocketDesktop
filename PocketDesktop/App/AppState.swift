@@ -2,17 +2,15 @@ import SwiftUI
 import Combine
 
 public enum AppTab: String, CaseIterable {
-    case home = "Home"
-    case desktop = "Desktop"
-    case browser = "Browser"
-    case tools = "Tools"
+    case home = "Главная"
+    case stream = "Стрим"
+    case windows = "Окна"
     
     var icon: String {
         switch self {
-        case .home: return "house.fill"
-        case .desktop: return "macwindow"
-        case .browser: return "safari.fill"
-        case .tools: return "wrench.and.screwdriver.fill"
+        case .home: return "hand.draw.fill"
+        case .stream: return "display"
+        case .windows: return "macwindow.on.rectangle"
         }
     }
 }

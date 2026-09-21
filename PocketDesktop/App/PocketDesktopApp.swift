@@ -72,44 +72,27 @@ struct PocketDesktopApp: App {
         }
     }
     
-    // Main 4-Tab Navigation View
+    // Main 3-Screen Navigation View matching User Mockup
     private var mainAppInterface: some View {
-        TabView(selection: Binding(
-            get: { appState.selectedTab },
-            set: { newTab in
-                if newTab == .tools {
-                    showingToolsSheet = true
-                } else {
-                    appState.selectedTab = newTab
-                }
-            }
-        )) {
+        TabView(selection: $appState.selectedTab) {
             HomeView()
                 .environmentObject(appState)
                 .tabItem {
-                    Label("Home", systemImage: "house.fill")
+                    Label("Главная", systemImage: "hand.draw.fill")
                 }
                 .tag(AppTab.home)
             
-            SimplifiedDesktopView()
-                .environmentObject(appState)
+            LiveDesktopView()
                 .tabItem {
-                    Label("Desktop", systemImage: "macwindow")
+                    Label("Стрим", systemImage: "display")
                 }
-                .tag(AppTab.desktop)
+                .tag(AppTab.stream)
             
-            BrowserView()
-                .environmentObject(appState)
+            WindowsManagerView()
                 .tabItem {
-                    Label("Browser", systemImage: "safari.fill")
+                    Label("Окна", systemImage: "macwindow.on.rectangle")
                 }
-                .tag(AppTab.browser)
-            
-            Color.clear
-                .tabItem {
-                    Label("Tools", systemImage: "wrench.and.screwdriver.fill")
-                }
-                .tag(AppTab.tools)
+                .tag(AppTab.windows)
         }
         .tint(Color.pdAccentBlue)
     }

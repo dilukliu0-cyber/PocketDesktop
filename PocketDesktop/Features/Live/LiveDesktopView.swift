@@ -2,266 +2,244 @@ import SwiftUI
 
 public struct LiveDesktopView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var appState: AppState
     @ObservedObject private var connection = ConnectionManager.shared
-    @ObservedObject private var latency = LatencyMonitor.shared
     
-    @State private var overlayVisible = true
-    @State private var overlayTimer: Timer?
+    @State private var showingKeyboard = false
     @State private var zoomScale: CGFloat = 1.0
     @State private var lastZoomScale: CGFloat = 1.0
-    @State private var panOffset: CGSize = .zero
-    @State private var lastPanOffset: CGSize = .zero
-    @State private var showingKeyboard = false
-    @State private var showingTrackpad = false
-    
-    private let mapper = TouchCoordinateMapper(desktopSize: DesktopScreenDimension(width: 1920, height: 1080))
+    @State private var streamImageSize: CGSize = .zero
     
     public init() {}
     
     public var body: some View {
-        GeometryReader { proxy in
+        NavigationStack {
             ZStack {
                 Color.black.ignoresSafeArea()
                 
-                // Desktop Screen Stream / Surface
-                remoteDesktopSurface(proxy: proxy)
-                    .scaleEffect(zoomScale)
-                    .offset(panOffset)
-                    .gesture(
-                        MagnificationGesture()
-                            .onChanged { val in
-                                zoomScale = max(1.0, min(3.5, lastZoomScale * val))
-                                resetOverlayTimer()
-                            }
-                            .onEnded { _ in
-                                lastZoomScale = zoomScale
-                            }
-                    )
-                    .gesture(
-                        DragGesture(minimumDistance: 4)
-                            .onChanged { val in
-                                handleDragGesture(val, viewSize: proxy.size)
-                                resetOverlayTimer()
-                            }
-                    )
-                    .onTapGesture(count: 2) {
-                        handleDoubleTap(viewSize: proxy.size)
-                        resetOverlayTimer()
-                    }
-                    .onTapGesture(count: 1) {
-                        handleSingleTap(viewSize: proxy.size)
-                        resetOverlayTimer()
-                    }
-                
-                // Floating Auto-Hiding Controls Overlay
-                if overlayVisible {
-                    overlayControls
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                }
-            }
-        }
-        .statusBar(hidden: !overlayVisible)
-        .onAppear {
-            startOverlayTimer()
-        }
-        .onDisappear {
-            overlayTimer?.invalidate()
-        }
-        .sheet(isPresented: $showingKeyboard) {
-            KeyboardView()
-        }
-        .sheet(isPresented: $showingTrackpad) {
-            TrackpadView()
-        }
-    }
-    
-    // Remote Display Surface Canvas
-    private func remoteDesktopSurface(proxy: GeometryProxy) -> some View {
-        ZStack {
-            // Simulated desktop workspace canvas
-            Rectangle()
-                .fill(LinearGradient(
-                    colors: [Color(red: 0.10, green: 0.13, blue: 0.20), Color(red: 0.05, green: 0.07, blue: 0.12)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
-                .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                .overlay(
-                    VStack {
-                        // Desktop Taskbar Preview
-                        Spacer()
-                        HStack(spacing: 12) {
-                            Image(systemName: "square.grid.2x2.fill")
-                                .foregroundColor(.pdAccentBlue)
-                            Image(systemName: "magnifyingglass")
-                                .foregroundColor(.white.opacity(0.7))
-                            Spacer()
-                            Text(Date().formatted(date: .omitted, time: .shortened))
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(.white.opacity(0.8))
-                        }
+                VStack(spacing: 0) {
+                    // Top Bar
+                    topBarView
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Color.black.opacity(0.6))
-                    }
-                )
-                .overlay(
-                    // Active Window Representation in Stream
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.white.opacity(0.08))
-                        .overlay(
-                            VStack(spacing: 4) {
-                                HStack {
-                                    Circle().fill(.red).frame(width: 8, height: 8)
-                                    Circle().fill(.yellow).frame(width: 8, height: 8)
-                                    Circle().fill(.green).frame(width: 8, height: 8)
-                                    Spacer()
-                                    Text(connection.openWindows.first?.title ?? "Pocket Desktop Stream")
-                                        .font(.system(size: 11, weight: .semibold))
+                        .padding(.top, 8)
+                        .padding(.bottom, 8)
+                        .background(Color.pdBackground)
+                    
+                    // Live Screen Display Area
+                    GeometryReader { geo in
+                        ZStack {
+                            Color.black
+                            
+                            if let img = connection.liveStreamImage {
+                                Image(uiImage: img)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .scaleEffect(zoomScale)
+                                    .background(GeometryReader { imgGeo in
+                                        Color.clear.preference(
+                                            key: ViewSizeKey.self,
+                                            value: imgGeo.size
+                                        )
+                                    })
+                                    .gesture(
+                                        DragGesture(minimumDistance: 0)
+                                            .onEnded { val in
+                                                handleScreenTouch(val.location, in: geo.size)
+                                            }
+                                    )
+                                    .gesture(
+                                        MagnificationGesture()
+                                            .onChanged { val in
+                                                zoomScale = max(1.0, min(3.0, lastZoomScale * val))
+                                            }
+                                            .onEnded { _ in
+                                                lastZoomScale = zoomScale
+                                            }
+                                    )
+                            } else {
+                                // Loading or waiting for frame
+                                VStack(spacing: 16) {
+                                    ProgressView()
+                                        .tint(.white)
+                                        .scaleEffect(1.2)
+                                    Text("Подключение к экрану ПК...")
+                                        .font(.system(size: 15, weight: .medium))
                                         .foregroundColor(.white.opacity(0.8))
-                                    Spacer()
+                                    Button("Запустить стрим") {
+                                        connection.startStream(displayId: currentDisplayId)
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color.pdAccentBlue)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(10)
                                 }
-                                .padding(.horizontal, 8)
-                                .padding(.top, 6)
-                                
-                                Spacer()
-                                Image(systemName: "macbook.and.iphone")
-                                    .font(.system(size: 38))
-                                    .foregroundColor(.white.opacity(0.3))
-                                Spacer()
                             }
-                        )
-                        .frame(width: proxy.size.width * 0.75, height: proxy.size.height * 0.45)
-                )
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-    
-    // Top & Bottom Overlay HUD
-    private var overlayControls: some View {
-        VStack {
-            // Top Bar
-            HStack {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(.white.opacity(0.85))
-                }
-                
-                Spacer()
-                
-                // Latency & Host badge
-                HStack(spacing: 8) {
-                    Circle().fill(Color.pdOnlineGreen).frame(width: 7, height: 7)
-                    Text(connection.currentDevice?.name ?? "Alex's PC")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.white)
-                    Text("•")
-                        .foregroundColor(.white.opacity(0.5))
-                    Text("\(latency.currentLatencyMs ?? 12) ms")
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
-                        .foregroundColor(.white.opacity(0.9))
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Capsule().fill(.ultraThinMaterial))
-                
-                Spacer()
-                
-                Button(action: {
-                    withAnimation {
-                        zoomScale = 1.0
-                        panOffset = .zero
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
-                }) {
-                    Image(systemName: "arrow.up.left.and.arrow.down.right.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(.white.opacity(0.85))
+                    
+                    // Bottom Controls Bar
+                    bottomBarControls
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Color.pdCardBackground)
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
+            .navigationBarHidden(true)
+            .sheet(isPresented: $showingKeyboard) {
+                KeyboardView()
+            }
+            .onAppear {
+                connection.requestDisplays()
+                connection.startStream(displayId: currentDisplayId)
+            }
+            .onDisappear {
+                connection.stopStream()
+            }
+        }
+    }
+    
+    private var currentDisplayId: Int {
+        if connection.selectedDisplayId != 0 {
+            return connection.selectedDisplayId
+        }
+        return connection.displays.first?.id ?? 6
+    }
+    
+    private var displayList: [DisplayItem] {
+        if !connection.displays.isEmpty {
+            return connection.displays
+        }
+        return [
+            DisplayItem(id: 6, name: "Экран 1", isPrimary: true),
+            DisplayItem(id: 5, name: "Экран 2", isPrimary: false)
+        ]
+    }
+    
+    // Top Bar with Close, Title, and Monitor Selector
+    private var topBarView: some View {
+        HStack(spacing: 12) {
+            Button(action: {
+                dismiss()
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                    Text("Закрыть")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundColor(.pdPrimaryText)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color.pdElevatedCard))
+            }
             
             Spacer()
             
-            // Bottom Action Bar
-            HStack(spacing: 16) {
-                overlayButton(icon: "keyboard", label: "Keyboard") {
-                    showingKeyboard = true
+            // Monitor Switcher Pills
+            HStack(spacing: 6) {
+                ForEach(displayList) { display in
+                    let isSelected = (display.id == connection.selectedDisplayId || (connection.selectedDisplayId == 0 && display.id == displayList.first?.id))
+                    Button(action: {
+                        Haptics.shared.click()
+                        connection.selectedDisplayId = display.id
+                        connection.startStream(displayId: display.id)
+                    }) {
+                        Text(display.name)
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(isSelected ? .white : .pdSecondaryText)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(isSelected ? Color.pdAccentBlue : Color.pdElevatedCard)
+                            )
+                    }
                 }
-                overlayButton(icon: "hand.draw", label: "Trackpad") {
-                    showingTrackpad = true
-                }
-                overlayButton(icon: "camera.fill", label: "Screenshot") {
-                    connection.sendMessage(.requestScreenshot)
-                    appState.activeToolSheet = .screenshot
-                }
-                overlayButton(icon: "power", label: "Disconnect", isDestructive: true) {
-                    connection.disconnect()
-                    dismiss()
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .background(
-                Capsule()
-                    .fill(.ultraThinMaterial)
-                    .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
-            )
-            .padding(.bottom, 24)
-        }
-    }
-    
-    private func overlayButton(icon: String, label: String, isDestructive: Bool = false, action: @escaping () -> Void) -> some View {
-        Button(action: {
-            Haptics.shared.click()
-            action()
-        }) {
-            VStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
-                Text(label)
-                    .font(.system(size: 10, weight: .medium))
-            }
-            .foregroundColor(isDestructive ? .pdOfflineRed : .white)
-            .frame(width: 62)
-        }
-    }
-    
-    private func startOverlayTimer() {
-        overlayTimer?.invalidate()
-        overlayTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: false) { _ in
-            withAnimation(.easeOut(duration: 0.3)) {
-                overlayVisible = false
             }
         }
     }
     
-    private func resetOverlayTimer() {
-        withAnimation(.easeIn(duration: 0.2)) {
-            overlayVisible = true
+    // Bottom Controls (Left Click, Right Click, Keyboard, Refresh)
+    private var bottomBarControls: some View {
+        HStack(spacing: 12) {
+            Button(action: {
+                Haptics.shared.click()
+                connection.sendMouseClick(button: .left)
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "hand.tap.fill")
+                    Text("ЛКМ")
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.pdPrimaryText)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color.pdElevatedCard))
+            }
+            
+            Button(action: {
+                Haptics.shared.click()
+                connection.sendMouseClick(button: .right)
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "hand.tap")
+                    Text("ПКМ")
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.pdPrimaryText)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color.pdElevatedCard))
+            }
+            
+            Button(action: {
+                Haptics.shared.click()
+                showingKeyboard = true
+            }) {
+                Image(systemName: "keyboard.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.pdAccentBlue))
+            }
+            
+            Button(action: {
+                Haptics.shared.click()
+                connection.startStream(displayId: currentDisplayId)
+            }) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.pdPrimaryText)
+                    .padding(10)
+                    .background(Circle().fill(Color.pdElevatedCard))
+            }
         }
-        startOverlayTimer()
     }
     
-    private func handleSingleTap(viewSize: CGSize) {
+    // Touch on remote screen: translate to Windows coordinates and click
+    private func handleScreenTouch(_ location: CGPoint, in containerSize: CGSize) {
+        guard containerSize.width > 0, containerSize.height > 0 else { return }
         Haptics.shared.click()
-        WebRTCManager.shared.sendInput(MouseInputPayload(action: .click, button: .left))
+        
+        let activeDisplay = connection.displays.first(where: { $0.id == currentDisplayId })
+        let bounds = activeDisplay?.bounds ?? DisplayRect(x: 0, y: 0, width: 1920, height: 1080)
+        
+        let normX = max(0.0, min(1.0, Double(location.x / containerSize.width)))
+        let normY = max(0.0, min(1.0, Double(location.y / containerSize.height)))
+        
+        let targetX = bounds.x + (normX * bounds.width)
+        let targetY = bounds.y + (normY * bounds.height)
+        
+        connection.sendMouseSet(x: targetX, y: targetY)
+        connection.sendMouseClick(button: .left)
     }
-    
-    private func handleDoubleTap(viewSize: CGSize) {
-        Haptics.shared.click()
-        WebRTCManager.shared.sendInput(MouseInputPayload(action: .doubleClick, button: .left))
-    }
-    
-    private func handleDragGesture(_ val: DragGesture.Value, viewSize: CGSize) {
-        let deltaX = Double(val.translation.width)
-        let deltaY = Double(val.translation.height)
-        WebRTCManager.shared.sendInput(MouseInputPayload(
-            action: .move,
-            deltaX: deltaX,
-            deltaY: deltaY
-        ))
+}
+
+private struct ViewSizeKey: PreferenceKey {
+    static var defaultValue: CGSize = .zero
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
+        value = nextValue()
     }
 }
