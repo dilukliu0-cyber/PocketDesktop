@@ -20,9 +20,8 @@ public struct LiveDesktopView: View {
                     // Top Bar
                     topBarView
                         .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                        .padding(.bottom, 8)
-                        .background(Color.pdBackground)
+                        .padding(.vertical, 10)
+                        .background(.black)
                     
                     // Live Screen Display Area
                     GeometryReader { geo in
@@ -56,22 +55,21 @@ public struct LiveDesktopView: View {
                                             }
                                     )
                             } else {
-                                // Loading or waiting for frame
-                                VStack(spacing: 16) {
+                                VStack(spacing: 12) {
                                     ProgressView()
-                                        .tint(.white)
-                                        .scaleEffect(1.2)
-                                    Text("Подключение к экрану ПК...")
-                                        .font(.system(size: 15, weight: .medium))
-                                        .foregroundColor(.white.opacity(0.8))
+                                        .tint(.white.opacity(0.7))
+                                    Text("Подключение к экрану ПК…")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.white.opacity(0.6))
                                     Button("Запустить стрим") {
                                         connection.startStream(displayId: currentDisplayId)
                                     }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .background(Color.pdAccentBlue)
+                                    .font(.system(size: 14, weight: .semibold))
                                     .foregroundColor(.white)
-                                    .cornerRadius(10)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 9)
+                                    .background(Color(white: 0.16))
+                                    .cornerRadius(9)
                                 }
                             }
                         }
@@ -81,8 +79,8 @@ public struct LiveDesktopView: View {
                     // Bottom Controls Bar
                     bottomBarControls
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(Color.pdCardBackground)
+                        .padding(.vertical, 10)
+                        .background(.black)
                 }
             }
             .navigationBarHidden(true)
@@ -128,16 +126,11 @@ public struct LiveDesktopView: View {
             Button(action: {
                 dismiss()
             }) {
-                HStack(spacing: 4) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .bold))
-                    Text("Закрыть")
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                .foregroundColor(.pdPrimaryText)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color.pdElevatedCard))
+                Image(systemName: "xmark")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 30, height: 30)
+                    .background(Circle().fill(Color(white: 0.16)))
             }
             
             Spacer()
@@ -152,13 +145,13 @@ public struct LiveDesktopView: View {
                         connection.startStream(displayId: display.id)
                     }) {
                         Text(display.name)
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(isSelected ? .white : .pdSecondaryText)
-                            .padding(.horizontal, 10)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(isSelected ? .black : .white.opacity(0.65))
+                            .padding(.horizontal, 12)
                             .padding(.vertical, 6)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(isSelected ? Color.pdAccentBlue : Color.pdElevatedCard)
+                                    .fill(isSelected ? Color.white : Color(white: 0.16))
                             )
                     }
                 }
@@ -168,20 +161,21 @@ public struct LiveDesktopView: View {
     
     // Bottom Controls (Left Click, Right Click, Keyboard, Refresh)
     private var bottomBarControls: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             Button(action: {
                 Haptics.shared.click()
                 connection.sendMouseClick(button: .left)
             }) {
                 HStack(spacing: 6) {
                     Image(systemName: "hand.tap.fill")
+                        .font(.system(size: 13))
                     Text("ЛКМ")
+                        .font(.system(size: 13, weight: .semibold))
                 }
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.pdPrimaryText)
+                .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.pdElevatedCard))
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color(white: 0.16)))
             }
             
             Button(action: {
@@ -190,21 +184,22 @@ public struct LiveDesktopView: View {
             }) {
                 HStack(spacing: 6) {
                     Image(systemName: "hand.tap")
+                        .font(.system(size: 13))
                     Text("ПКМ")
+                        .font(.system(size: 13, weight: .semibold))
                 }
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.pdPrimaryText)
+                .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.pdElevatedCard))
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color(white: 0.16)))
             }
             
             Button(action: {
                 Haptics.shared.click()
                 showingKeyboard = true
             }) {
-                Image(systemName: "keyboard.fill")
-                    .font(.system(size: 16, weight: .semibold))
+                Image(systemName: "keyboard")
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
@@ -216,10 +211,10 @@ public struct LiveDesktopView: View {
                 connection.startStream(displayId: currentDisplayId)
             }) {
                 Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.pdPrimaryText)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.8))
                     .padding(10)
-                    .background(Circle().fill(Color.pdElevatedCard))
+                    .background(Circle().fill(Color(white: 0.16)))
             }
         }
     }

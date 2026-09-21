@@ -37,7 +37,7 @@ public struct DeviceCard: View {
                         }
                         
                         Text(device?.name ?? "No PC Connected")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .font(.system(size: 24, weight: .bold))
                             .foregroundColor(.pdPrimaryText)
                         
                         Text(device?.osName ?? "Tap to pair a computer")

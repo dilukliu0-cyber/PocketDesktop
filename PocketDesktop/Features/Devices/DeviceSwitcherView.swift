@@ -14,7 +14,7 @@ public struct DeviceSwitcherView: View {
                 VStack(spacing: 20) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Devices")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .font(.system(size: 28, weight: .bold))
                             .foregroundColor(.pdPrimaryText)
                         Text("Select a computer to control or add another device.")
                             .font(.system(size: 15))

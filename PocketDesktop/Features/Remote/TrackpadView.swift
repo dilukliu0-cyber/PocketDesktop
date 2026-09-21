@@ -25,7 +25,7 @@ public struct TrackpadView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Trackpad")
-                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .font(.system(size: 24, weight: .bold))
                                 .foregroundColor(.pdPrimaryText)
                             Text(connection.currentDevice?.name ?? "Alex's PC")
                                 .font(.system(size: 13))
@@ -56,12 +56,12 @@ public struct TrackpadView: View {
                         
                         VStack(spacing: 12) {
                             Image(systemName: "hand.draw")
-                                .font(.system(size: 40))
-                                .foregroundColor(.pdSecondaryText.opacity(0.4))
+                                .font(.system(size: 30))
+                                .foregroundColor(.pdTertiaryText)
                             
                             Text("1 палец: курсор • Тап: ЛКМ")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.pdSecondaryText.opacity(0.7))
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.pdTertiaryText)
                         }
                     }
                     .padding(.horizontal, 20)
@@ -119,7 +119,7 @@ public struct TrackpadView: View {
                                 .font(.system(size: 18, weight: .semibold))
                                 .foregroundColor(.white)
                                 .frame(width: 58, height: 54)
-                                .background(RoundedRectangle(cornerRadius: 16).fill(Color.pdAccentGradient))
+                                .background(RoundedRectangle(cornerRadius: 16).fill(Color.pdAccentBlue))
                         }
                     }
                     .padding(.horizontal, 20)

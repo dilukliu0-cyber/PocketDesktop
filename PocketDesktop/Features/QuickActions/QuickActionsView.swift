@@ -17,7 +17,7 @@ public struct QuickActionsView: View {
                     // Header
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Quick Actions")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .font(.system(size: 28, weight: .bold))
                             .foregroundColor(.pdPrimaryText)
                         Text("Connected to \(connection.currentDevice?.name ?? "Alex’s PC")")
                             .font(.system(size: 14))
@@ -30,8 +30,8 @@ public struct QuickActionsView: View {
                     // SECTION 1: MEDIA & VOLUME
                     VStack(alignment: .leading, spacing: 14) {
                         Text("Media & Volume")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundColor(.pdPrimaryText)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.pdSecondaryText)
                             .padding(.horizontal, 20)
                         
                         GlassCard(cornerRadius: 20, padding: 18) {
@@ -65,7 +65,7 @@ public struct QuickActionsView: View {
                                         connection.performMediaCommand(.playPause)
                                     }) {
                                         Circle()
-                                            .fill(Color.pdAccentGradient)
+                                            .fill(Color.pdAccentBlue)
                                             .frame(width: 54, height: 54)
                                             .overlay(
                                                 Image(systemName: isPlaying ? "pause.fill" : "play.fill")
@@ -90,8 +90,8 @@ public struct QuickActionsView: View {
                     // SECTION 2: COMPUTER COMMANDS
                     VStack(alignment: .leading, spacing: 14) {
                         Text("Computer")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundColor(.pdPrimaryText)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.pdSecondaryText)
                             .padding(.horizontal, 20)
                         
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
@@ -121,8 +121,8 @@ public struct QuickActionsView: View {
                     // SECTION 3: PRODUCTIVITY
                     VStack(alignment: .leading, spacing: 14) {
                         Text("Productivity")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundColor(.pdPrimaryText)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.pdSecondaryText)
                             .padding(.horizontal, 20)
                         
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {

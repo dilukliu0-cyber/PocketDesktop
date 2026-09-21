@@ -50,7 +50,7 @@ public struct ConnectingView: View {
                         .foregroundColor(.pdSecondaryText)
                     
                     Text(payload.deviceName)
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .font(.system(size: 28, weight: .bold))
                         .foregroundColor(.pdPrimaryText)
                     
                     Text(payload.osName)

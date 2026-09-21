@@ -12,7 +12,7 @@ public struct ToolsSheetView: View {
                 VStack(spacing: 20) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Tools & Utilities")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .font(.system(size: 28, weight: .bold))
                             .foregroundColor(.pdPrimaryText)
                         Text("Control input, browse files, and trigger shortcuts.")
                             .font(.system(size: 15))

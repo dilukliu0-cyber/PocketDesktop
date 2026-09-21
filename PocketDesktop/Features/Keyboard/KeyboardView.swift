@@ -19,7 +19,7 @@ public struct KeyboardView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Remote Keyboard")
-                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                .font(.system(size: 22, weight: .bold))
                                 .foregroundColor(.pdPrimaryText)
                             Text("Encrypted input stream • No history stored")
                                 .font(.system(size: 12))

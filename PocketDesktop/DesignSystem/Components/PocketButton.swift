@@ -40,21 +40,21 @@ public struct PocketButton: View {
                 if isLoading {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: textColor))
-                        .scaleEffect(0.9)
+                        .scaleEffect(0.85)
                 } else if let icon = icon {
                     Image(systemName: icon)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 15, weight: .medium))
                 }
                 
                 Text(title)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
             }
             .foregroundColor(textColor)
             .frame(maxWidth: fullWidth ? .infinity : nil)
-            .padding(.vertical, 14)
-            .padding(.horizontal, 20)
+            .padding(.vertical, 13)
+            .padding(.horizontal, 18)
             .background(backgroundView)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(borderView)
         }
         .buttonStyle(ScaleTouchButtonStyle())
@@ -74,11 +74,11 @@ public struct PocketButton: View {
     private var backgroundView: some View {
         switch style {
         case .primary:
-            Color.pdAccentGradient
+            Color.pdAccentBlue
         case .secondary:
             Color.pdCardBackground
         case .destructive:
-            Color.pdOfflineRed.opacity(0.12)
+            Color.pdOfflineRed.opacity(0.10)
         case .tile:
             Color.pdElevatedCard
         }
@@ -90,13 +90,13 @@ public struct PocketButton: View {
         case .primary:
             EmptyView()
         case .secondary:
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color.pdBorder, lineWidth: 1)
         case .destructive:
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.pdOfflineRed.opacity(0.3), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.pdOfflineRed.opacity(0.25), lineWidth: 1)
         case .tile:
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color.pdBorder, lineWidth: 1)
         }
     }
@@ -106,7 +106,8 @@ public struct ScaleTouchButtonStyle: ButtonStyle {
     public init() {}
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.975 : 1.0)
+            .opacity(configuration.isPressed ? 0.85 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.75), value: configuration.isPressed)
     }
 }

@@ -12,7 +12,7 @@ public struct BrowserTabsView: View {
                 VStack(spacing: 16) {
                     HStack {
                         Text("Open Tabs")
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .font(.system(size: 26, weight: .bold))
                             .foregroundColor(.pdPrimaryText)
                         Spacer()
                         Button(action: {
@@ -27,7 +27,7 @@ public struct BrowserTabsView: View {
                             .foregroundColor(.white)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 8)
-                            .background(Color.pdAccentGradient)
+                            .background(Color.pdAccentBlue)
                             .clipShape(Capsule())
                         }
                     }

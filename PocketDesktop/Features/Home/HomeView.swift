@@ -26,28 +26,27 @@ public struct HomeView: View {
             ZStack {
                 Color.pdBackground.ignoresSafeArea()
                 
-                VStack(spacing: 12) {
-                    // 1. TOP HEADER: PocketDesktop ● ПК подключен [⚙️]
-                    headerView
-                        .padding(.horizontal, 20)
-                        .padding(.top, 10)
-                    
-                    // 2. MEDIA CONTROL BAR
-                    mediaControlBar
-                        .padding(.horizontal, 20)
-                    
-                    // 3. BIG TRACKPAD SURFACE (60-70% height)
-                    trackpadSurfaceView
-                        .padding(.horizontal, 20)
-                    
-                    // QUICK APPS ROW: Literal app icons (Chrome, Discord, etc.)
-                    quickAppsRow
-                        .padding(.horizontal, 20)
-                    
-                    // 4. BOTTOM 3 ACTION BUTTONS: [ Клавиатура ] [ Стрим ] [ Окна ]
-                    bottomNavigationButtons
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 12)
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 16) {
+                        // 1. HEADER
+                        headerView
+                        
+                        // 2. MEDIA CONTROL BAR
+                        mediaControlBar
+                        
+                        // 3. TRACKPAD SURFACE
+                        trackpadSurfaceView
+                            .frame(height: 340)
+                        
+                        // 4. QUICK APPS ROW
+                        quickAppsRow
+                        
+                        // 5. BOTTOM ACTION BUTTONS
+                        bottomNavigationButtons
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 20)
                 }
             }
             .navigationBarHidden(true)
@@ -71,39 +70,35 @@ public struct HomeView: View {
         }
     }
     
-    // MARK: - 1. Header View
+    // MARK: - 1. Header
     private var headerView: some View {
-        HStack {
+        HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("PocketDesktop")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                Text(connection.currentDevice?.name ?? "Pocket Desktop")
+                    .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.pdPrimaryText)
+                    .lineLimit(1)
+                
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(statusColor)
+                        .frame(width: 6, height: 6)
+                    Text(statusText)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(statusColor)
+                }
             }
             
             Spacer()
             
-            // Connection Status Dot & Label
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 8, height: 8)
-                Text(statusText)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(statusColor)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(Capsule().fill(statusColor.opacity(0.12)))
-            
-            // Settings Button
             Button(action: {
                 Haptics.shared.click()
                 showingSettings = true
             }) {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 16))
+                Image(systemName: "gearshape")
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.pdSecondaryText)
-                    .padding(8)
+                    .frame(width: 38, height: 38)
                     .background(Circle().fill(Color.pdElevatedCard))
             }
         }
@@ -119,82 +114,59 @@ public struct HomeView: View {
     
     private var statusText: String {
         switch connection.state {
-        case .connected: return "ПК подключен"
-        case .connecting, .authenticating: return "Подключение..."
+        case .connected: return "Подключено"
+        case .connecting, .authenticating: return "Подключение…"
         case .reconnecting: return "Переподключение"
-        default: return "Отключен"
+        default: return "Отключено"
         }
     }
     
     // MARK: - 2. Media Control Bar
     private var mediaControlBar: some View {
-        VStack(spacing: 8) {
-            // Transport buttons: << -10s, Play/Pause, Stop, >> +10s
-            HStack(spacing: 20) {
-                // Rewind 10s
-                Button(action: {
-                    connection.performMediaCommand(.rewind10)
-                }) {
-                    HStack(spacing: 2) {
-                        Image(systemName: "gobackward.10")
-                            .font(.system(size: 18, weight: .semibold))
-                    }
-                    .foregroundColor(.pdPrimaryText)
+        VStack(spacing: 10) {
+            // Transport buttons
+            HStack(spacing: 0) {
+                Button(action: { connection.performMediaCommand(.rewind10) }) {
+                    controlIcon("gobackward.10", size: 16)
+                        .frame(maxWidth: .infinity)
                 }
                 
-                Spacer()
-                
-                // Play / Pause Toggle
-                Button(action: {
-                    connection.performMediaCommand(.playPause)
-                }) {
+                Button(action: { connection.performMediaCommand(.playPause) }) {
                     Image(systemName: connection.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 38))
+                        .font(.system(size: 40))
                         .foregroundColor(.pdAccentBlue)
+                        .frame(maxWidth: .infinity)
                 }
                 
-                Spacer()
-                
-                // Stop Button
-                Button(action: {
-                    connection.performMediaCommand(.stop)
-                }) {
-                    Image(systemName: "stop.circle.fill")
-                        .font(.system(size: 26))
-                        .foregroundColor(.pdSecondaryText)
+                Button(action: { connection.performMediaCommand(.stop) }) {
+                    controlIcon("stop.fill", size: 18)
+                        .frame(maxWidth: .infinity)
                 }
                 
-                Spacer()
-                
-                // Forward 10s
-                Button(action: {
-                    connection.performMediaCommand(.forward10)
-                }) {
-                    HStack(spacing: 2) {
-                        Image(systemName: "goforward.10")
-                            .font(.system(size: 18, weight: .semibold))
-                    }
-                    .foregroundColor(.pdPrimaryText)
+                Button(action: { connection.performMediaCommand(.forward10) }) {
+                    controlIcon("goforward.10", size: 16)
+                        .frame(maxWidth: .infinity)
                 }
             }
-            .padding(.horizontal, 12)
             
-            // Scrubber Slider
+            // Scrubber
             HStack(spacing: 8) {
                 Text("01:14")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.pdSecondaryText)
+                    .monospacedDigit()
+                    .font(.system(size: 11))
+                    .foregroundColor(.pdTertiaryText)
                 
                 Slider(value: $connection.mediaProgress, in: 0...1)
                     .tint(.pdAccentBlue)
                 
                 Text("04:30")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.pdSecondaryText)
+                    .monospacedDigit()
+                    .font(.system(size: 11))
+                    .foregroundColor(.pdTertiaryText)
             }
             
-            // Speed Pills: 1x, 1.25x, 1.5x, 2x
-            HStack(spacing: 10) {
+            // Speed pills
+            HStack(spacing: 8) {
                 ForEach(speedOptions, id: \.self) { speed in
                     let isSelected = selectedSpeed == speed
                     Button(action: {
@@ -202,11 +174,11 @@ public struct HomeView: View {
                         selectedSpeed = speed
                         connection.performMediaCommand(.setRate, rate: speed)
                     }) {
-                        Text("\(String(format: "%g", speed))x")
-                            .font(.system(size: 12, weight: .bold))
+                        Text("\(String(format: "%g", speed))×")
+                            .font(.system(size: 12, weight: .medium))
                             .foregroundColor(isSelected ? .white : .pdSecondaryText)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 5)
+                            .padding(.vertical, 6)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
                                     .fill(isSelected ? Color.pdAccentBlue : Color.pdElevatedCard)
@@ -215,46 +187,51 @@ public struct HomeView: View {
                 }
             }
         }
-        .padding(12)
+        .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color.pdCardBackground)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.pdBorder, lineWidth: 1)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.pdBorder, lineWidth: 1)
+                )
         )
     }
     
-    // MARK: - 3. Massive Trackpad Surface
+    private func controlIcon(_ name: String, size: CGFloat) -> some View {
+        Image(systemName: name)
+            .font(.system(size: size, weight: .medium))
+            .foregroundColor(.pdPrimaryText)
+            .frame(height: 36)
+            .contentShape(Rectangle())
+    }
+    
+    // MARK: - 3. Trackpad Surface
     private var trackpadSurfaceView: some View {
         GeometryReader { _ in
             ZStack {
-                // Background Trackpad Tile
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Color.pdElevatedCard)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color.pdCardBackground)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .stroke(Color.pdBorder, lineWidth: 1)
                     )
                 
-                // Trackpad Label & Gestures Info
-                VStack(spacing: 8) {
+                VStack(spacing: 10) {
                     Image(systemName: "hand.draw")
-                        .font(.system(size: 42))
-                        .foregroundColor(.pdSecondaryText.opacity(0.35))
+                        .font(.system(size: 36))
+                        .foregroundColor(.pdTertiaryText)
                     
-                    Text("Тачпад")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(.pdPrimaryText.opacity(0.6))
-                    
-                    Text("1 палец: курсор • Тап: ЛКМ")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.pdSecondaryText.opacity(0.7))
-                    
-                    Text("2 пальца: скролл / ПКМ • Удержание: Drag")
-                        .font(.system(size: 11))
-                        .foregroundColor(.pdSecondaryText.opacity(0.6))
+                    VStack(spacing: 4) {
+                        Text("Тачпад")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.pdSecondaryText)
+                        Text("1 палец — курсор и ЛКМ • 2 пальца — скролл и ПКМ")
+                            .font(.system(size: 12))
+                            .foregroundColor(.pdTertiaryText)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 12)
+                    }
                 }
             }
             .contentShape(Rectangle())
@@ -301,7 +278,6 @@ public struct HomeView: View {
                 connection.sendMouseDown(button: .left)
             }
         }
-        .frame(maxHeight: .infinity)
     }
     
     // MARK: - Quick Open Apps Row
@@ -311,49 +287,55 @@ public struct HomeView: View {
             DesktopWindow(id: "discord", title: "Discord", appName: "Discord")
         ] : connection.openWindows
         
-        return ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                ForEach(apps) { win in
-                    Button(action: {
-                        Haptics.shared.click()
-                        showingWindows = true
-                    }) {
-                        HStack(spacing: 8) {
-                            BrandAppIconView(appName: win.appName, size: 26)
-                            Text(win.appName.isEmpty ? win.title : win.appName)
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(.pdPrimaryText)
-                                .lineLimit(1)
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Приложения")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.pdSecondaryText)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(apps) { win in
+                        Button(action: {
+                            Haptics.shared.click()
+                            showingWindows = true
+                        }) {
+                            HStack(spacing: 8) {
+                                BrandAppIconView(appName: win.appName, size: 22)
+                                Text(win.appName.isEmpty ? win.title : win.appName)
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(.pdPrimaryText)
+                                    .lineLimit(1)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(RoundedRectangle(cornerRadius: 12).fill(Color.pdCardBackground))
+                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.pdBorder, lineWidth: 1))
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color.pdCardBackground))
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.pdBorder, lineWidth: 1))
                     }
                 }
             }
         }
     }
     
-    // MARK: - 4. Bottom 3 Big Navigation Buttons
+    // MARK: - 4. Bottom 3 Navigation Buttons
     private var bottomNavigationButtons: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             // [ Клавиатура ]
             Button(action: {
                 Haptics.shared.click()
                 showingKeyboard = true
             }) {
-                VStack(spacing: 6) {
-                    Image(systemName: "keyboard.fill")
-                        .font(.system(size: 20))
+                VStack(spacing: 5) {
+                    Image(systemName: "keyboard")
+                        .font(.system(size: 18))
                     Text("Клавиатура")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: 12, weight: .semibold))
                 }
                 .foregroundColor(.pdPrimaryText)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(RoundedRectangle(cornerRadius: 16).fill(Color.pdCardBackground))
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.pdBorder, lineWidth: 1))
+                .padding(.vertical, 12)
+                .background(RoundedRectangle(cornerRadius: 14).fill(Color.pdCardBackground))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.pdBorder, lineWidth: 1))
             }
             
             // [ Стрим ]
@@ -361,16 +343,16 @@ public struct HomeView: View {
                 Haptics.shared.click()
                 showingStream = true
             }) {
-                VStack(spacing: 6) {
+                VStack(spacing: 5) {
                     Image(systemName: "display")
-                        .font(.system(size: 20))
+                        .font(.system(size: 18))
                     Text("Стрим")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: 12, weight: .semibold))
                 }
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(RoundedRectangle(cornerRadius: 16).fill(Color.pdAccentBlue))
+                .padding(.vertical, 12)
+                .background(RoundedRectangle(cornerRadius: 14).fill(Color.pdAccentBlue))
             }
             
             // [ Окна ]
@@ -378,17 +360,17 @@ public struct HomeView: View {
                 Haptics.shared.click()
                 showingWindows = true
             }) {
-                VStack(spacing: 6) {
+                VStack(spacing: 5) {
                     Image(systemName: "macwindow.on.rectangle")
-                        .font(.system(size: 20))
+                        .font(.system(size: 18))
                     Text("Окна")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: 12, weight: .semibold))
                 }
                 .foregroundColor(.pdPrimaryText)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(RoundedRectangle(cornerRadius: 16).fill(Color.pdCardBackground))
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.pdBorder, lineWidth: 1))
+                .padding(.vertical, 12)
+                .background(RoundedRectangle(cornerRadius: 14).fill(Color.pdCardBackground))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.pdBorder, lineWidth: 1))
             }
         }
     }

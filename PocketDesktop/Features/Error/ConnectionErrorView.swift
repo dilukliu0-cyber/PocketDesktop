@@ -29,7 +29,7 @@ public struct ConnectionErrorView: View {
                 
                 VStack(spacing: 8) {
                     Text(connection.currentDevice?.name ?? "Computer")
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .font(.system(size: 26, weight: .bold))
                         .foregroundColor(.pdPrimaryText)
                     
                     Text("Offline")

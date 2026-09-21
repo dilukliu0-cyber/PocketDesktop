@@ -31,7 +31,7 @@ public struct PairDeviceView: View {
                     
                     VStack(spacing: 8) {
                         Text("Connect a computer")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .font(.system(size: 28, weight: .bold))
                             .foregroundColor(.pdPrimaryText)
                         
                         Text("Scan the QR code shown on your desktop screen to link this iPhone securely.")
