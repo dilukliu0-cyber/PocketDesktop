@@ -6,7 +6,7 @@ struct PocketDesktopApp: App {
     @ObservedObject private var connection = ConnectionManager.shared
     @ObservedObject private var repo = DeviceRepository.shared
     
-    @State private var showingToolsSheet = false
+    
     
     var body: some Scene {
         WindowGroup {
@@ -64,10 +64,6 @@ struct PocketDesktopApp: App {
                     DeviceSwitcherView()
                         .environmentObject(appState)
                 }
-            }
-            .sheet(isPresented: $showingToolsSheet) {
-                ToolsSheetView()
-                    .environmentObject(appState)
             }
         }
     }

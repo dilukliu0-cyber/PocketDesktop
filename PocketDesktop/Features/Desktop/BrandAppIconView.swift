@@ -36,7 +36,7 @@ public struct BrandAppIconView: View {
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: size * 0.26, style: .continuous))
-        .shadow(color: Color.black.opacity(0.25), radius: 6, x: 0, y: 3)
+        .shadow(color: Color.black.opacity(0.18), radius: max(1, size * 0.08), x: 0, y: max(1, size * 0.04))
     }
     
     // MARK: - 1. Google Chrome Icon (Iconic 3-color pinwheel + blue center)

@@ -11,28 +11,28 @@ public struct WindowsManagerView: View {
             ZStack {
                 Color.pdBackground.ignoresSafeArea()
 
-                ScrollView {
-                    VStack(spacing: 20) {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 16) {
                         // 1. Header
                         headerView
                             .padding(.horizontal, 20)
-                            .padding(.top, 12)
+                            .padding(.top, 10)
 
-                        // 2. Physical Monitors with 50/50 Split Zones
+                        // 2. Physical Monitors with snap zones
                         monitorsSection
                             .padding(.horizontal, 20)
 
-                        // 3. Quick Split 50/50 Combo Button (if 2+ apps open)
+                        // 3. Quick Split 50/50 (if 2+ apps open)
                         if appList.count >= 2 {
                             quickSplitComboBanner
                                 .padding(.horizontal, 20)
                         }
 
-                        // 4. App icons grid (Chrome, Discord, etc.)
-                        appIconsGridSection
+                        // 4. App list
+                        appListSection
                             .padding(.horizontal, 20)
 
-                        Spacer(minLength: 40)
+                        Spacer(minLength: 20)
                     }
                 }
             }
@@ -47,14 +47,9 @@ public struct WindowsManagerView: View {
     // MARK: - Header
     private var headerView: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Управление окнами")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.pdPrimaryText)
-                Text("Расставьте приложения по экранам")
-                    .font(.system(size: 13))
-                    .foregroundColor(.pdSecondaryText)
-            }
+            Text("Окна")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.pdPrimaryText)
             Spacer()
             Button(action: {
                 Haptics.shared.click()
@@ -62,15 +57,15 @@ public struct WindowsManagerView: View {
                 connection.requestWindows()
             }) {
                 Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.pdPrimaryText)
-                    .frame(width: 34, height: 34)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.pdSecondaryText)
+                    .frame(width: 32, height: 32)
                     .background(Circle().fill(Color.pdElevatedCard))
             }
         }
     }
 
-    // MARK: - Displays List
+    // MARK: - Data
     private var displayList: [DisplayItem] {
         if !connection.displays.isEmpty {
             return connection.displays
@@ -81,7 +76,6 @@ public struct WindowsManagerView: View {
         ]
     }
 
-    // Fallback known apps if windows list is currently refreshing
     private var appList: [DesktopWindow] {
         if !connection.openWindows.isEmpty {
             return connection.openWindows
@@ -89,18 +83,13 @@ public struct WindowsManagerView: View {
         return [
             DesktopWindow(id: "chrome", title: "Google Chrome", appName: "chrome"),
             DesktopWindow(id: "discord", title: "Discord", appName: "Discord"),
-            DesktopWindow(id: "code", title: "VS Code", appName: "Code"),
-            DesktopWindow(id: "explorer", title: "Проводник", appName: "explorer")
+            DesktopWindow(id: "code", title: "VS Code", appName: "Code")
         ]
     }
 
-    // MARK: - Monitors Section with 50/50 Halves Drop Targets
+    // MARK: - Monitors Section
     private var monitorsSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Мониторы")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.pdSecondaryText)
-
+        VStack(spacing: 10) {
             ForEach(displayList) { display in
                 monitorCardView(display: display)
             }
@@ -108,76 +97,65 @@ public struct WindowsManagerView: View {
     }
 
     private func monitorCardView(display: DisplayItem) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: display.isPrimary ? "display.2" : "display")
-                    .font(.system(size: 14))
-                    .foregroundColor(display.isPrimary ? .pdAccentBlue : .pdSecondaryText)
+        VStack(spacing: 10) {
+            HStack(spacing: 6) {
                 Text(display.name)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.pdPrimaryText)
                 if display.isPrimary {
-                    Text("Основной")
-                        .font(.system(size: 10, weight: .semibold))
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(Color.pdAccentTint))
+                    Text("•")
+                        .font(.system(size: 10))
                         .foregroundColor(.pdAccentBlue)
                 }
                 Spacer()
                 Text("\(Int(display.bounds.width))×\(Int(display.bounds.height))")
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.pdTertiaryText)
             }
 
-            // Visual monitor representation split into Left 50% / Full / Right 50%
-            HStack(spacing: 8) {
-                snapZoneTile(display: display, zone: "left", label: "Слева", icon: "rectangle.leadinghalf.filled")
-                snapZoneTile(display: display, zone: "full", label: "Полный", icon: "rectangle.fill")
-                snapZoneTile(display: display, zone: "right", label: "Справа", icon: "rectangle.trailinghalf.filled")
+            // Snap zones: Left / Full / Right
+            HStack(spacing: 6) {
+                snapZoneTile(display: display, zone: "left", icon: "rectangle.leadinghalf.filled")
+                snapZoneTile(display: display, zone: "full", icon: "rectangle.fill")
+                snapZoneTile(display: display, zone: "right", icon: "rectangle.trailinghalf.filled")
             }
-            .frame(height: 88)
+            .frame(height: 64)
         }
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.pdCardBackground))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.pdBorder, lineWidth: 1))
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.pdCardBackground))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.pdBorder, lineWidth: 0.5))
     }
 
-    private func snapZoneTile(display: DisplayItem, zone: String, label: String, icon: String) -> some View {
+    private func snapZoneTile(display: DisplayItem, zone: String, icon: String) -> some View {
         let key = "\(display.id)_\(zone)"
         let isHovered = hoveredZone == key
 
-        return VStack(spacing: 5) {
-            Image(systemName: icon)
-                .font(.system(size: 22, weight: .medium))
-                .foregroundColor(isHovered ? .white : .pdAccentBlue)
-            Text(label)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(isHovered ? .white : .pdPrimaryText)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(isHovered ? Color.pdAccentBlue : Color.pdElevatedCard)
-        )
-        .onDrop(of: ["public.text", "public.plain-text"], isTargeted: Binding(
-            get: { hoveredZone == key },
-            set: { targeted in hoveredZone = targeted ? key : nil }
-        )) { providers in
-            guard let provider = providers.first else { return false }
-            _ = provider.loadObject(ofClass: String.self) { winId, _ in
-                if let id = winId {
-                    DispatchQueue.main.async {
-                        Haptics.shared.success()
-                        connection.sendWindowMove(windowId: id, displayId: display.id, zone: zone)
+        return Image(systemName: icon)
+            .font(.system(size: 20, weight: .medium))
+            .foregroundColor(isHovered ? .white : .pdAccentBlue)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isHovered ? Color.pdAccentBlue : Color.pdElevatedCard)
+            )
+            .onDrop(of: ["public.text", "public.plain-text"], isTargeted: Binding(
+                get: { hoveredZone == key },
+                set: { targeted in hoveredZone = targeted ? key : nil }
+            )) { providers in
+                guard let provider = providers.first else { return false }
+                _ = provider.loadObject(ofClass: String.self) { winId, _ in
+                    if let id = winId {
+                        DispatchQueue.main.async {
+                            Haptics.shared.success()
+                            connection.sendWindowMove(windowId: id, displayId: display.id, zone: zone)
+                        }
                     }
                 }
+                return true
             }
-            return true
-        }
     }
 
-    // MARK: - Quick 50/50 Combo Banner
+    // MARK: - Quick 50/50 Combo
     private var quickSplitComboBanner: some View {
         let first = appList[0]
         let second = appList[1]
@@ -190,145 +168,83 @@ public struct WindowsManagerView: View {
                 connection.sendWindowMove(windowId: second.id, displayId: targetDisplay, zone: "right")
             }
         }) {
-            HStack(spacing: 12) {
-                HStack(spacing: -6) {
-                    BrandAppIconView(appName: first.appName, size: 30)
-                    BrandAppIconView(appName: second.appName, size: 30)
+            HStack(spacing: 10) {
+                HStack(spacing: -5) {
+                    BrandAppIconView(appName: first.appName, size: 26)
+                    BrandAppIconView(appName: second.appName, size: 26)
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Слева и справа одной кнопкой")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.pdPrimaryText)
-                    Text("\(first.appName) + \(second.appName)")
-                        .font(.system(size: 12))
-                        .foregroundColor(.pdSecondaryText)
-                }
+                Text("\(first.appName) + \(second.appName)")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.pdPrimaryText)
 
                 Spacer()
 
                 Image(systemName: "rectangle.split.2x1.fill")
-                    .font(.system(size: 20))
+                    .font(.system(size: 16))
                     .foregroundColor(.pdAccentBlue)
             }
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.pdCardBackground))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.pdBorder, lineWidth: 1))
+            .padding(10)
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.pdCardBackground))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.pdBorder, lineWidth: 0.5))
         }
     }
 
-    // MARK: - App Icons Grid
-    private var appIconsGridSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text("Открытые приложения")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.pdSecondaryText)
-                Spacer()
-                Text("\(appList.count) шт.")
-                    .font(.system(size: 12))
-                    .foregroundColor(.pdTertiaryText)
-            }
-
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                ForEach(appList) { win in
-                    appIconCard(win: win)
-                }
+    // MARK: - App List (compact single-row cards)
+    private var appListSection: some View {
+        VStack(spacing: 8) {
+            ForEach(appList) { win in
+                appRow(win: win)
             }
         }
     }
 
-    private func appIconCard(win: DesktopWindow) -> some View {
+    private func appRow(win: DesktopWindow) -> some View {
         let primaryDisp = displayList.first?.id ?? 6
-        let secondaryDisp = displayList.count > 1 ? displayList[1].id : primaryDisp
 
-        return VStack(spacing: 0) {
-            // App row
-            HStack(spacing: 10) {
-                BrandAppIconView(appName: win.appName.isEmpty ? win.title : win.appName, size: 40)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(win.appName.isEmpty ? win.title : win.appName)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.pdPrimaryText)
-                        .lineLimit(1)
-                    Text("Перетащите на монитор")
-                        .font(.system(size: 10))
-                        .foregroundColor(.pdTertiaryText)
+        return HStack(spacing: 10) {
+            BrandAppIconView(appName: win.appName.isEmpty ? win.title : win.appName, size: 34)
+
+            Text(win.appName.isEmpty ? win.title : win.appName)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.pdPrimaryText)
+                .lineLimit(1)
+
+            Spacer(minLength: 4)
+
+            // 3 compact snap buttons
+            HStack(spacing: 4) {
+                snapButton(icon: "rectangle.leadinghalf.filled") {
+                    connection.sendWindowMove(windowId: win.id, displayId: primaryDisp, zone: "left")
                 }
-                Spacer(minLength: 4)
-            }
-            .padding(.bottom, 10)
-
-            Divider()
-                .overlay(Color.pdBorder)
-
-            // Placement buttons
-            VStack(spacing: 8) {
-                // Screen 1 row
-                HStack(spacing: 6) {
-                    placementButton(icon: "rectangle.leadinghalf.filled", title: "50%", large: true) {
-                        connection.sendWindowMove(windowId: win.id, displayId: primaryDisp, zone: "left")
-                    }
-                    placementButton(icon: "rectangle.fill", title: nil, large: false) {
-                        connection.sendWindowMove(windowId: win.id, displayId: primaryDisp, zone: "full")
-                    }
-                    placementButton(icon: "rectangle.trailinghalf.filled", title: "50%", large: false) {
-                        connection.sendWindowMove(windowId: win.id, displayId: primaryDisp, zone: "right")
-                    }
+                snapButton(icon: "rectangle.fill") {
+                    connection.sendWindowMove(windowId: win.id, displayId: primaryDisp, zone: "full")
                 }
-
-                // Screen 2 row
-                if displayList.count > 1 {
-                    HStack(spacing: 6) {
-                        placementButton(icon: "rectangle.leadinghalf.filled", title: "Экран 2", large: true) {
-                            connection.sendWindowMove(windowId: win.id, displayId: secondaryDisp, zone: "left")
-                        }
-                        placementButton(icon: "rectangle.trailinghalf.filled", title: "Экран 2", large: true) {
-                            connection.sendWindowMove(windowId: win.id, displayId: secondaryDisp, zone: "right")
-                        }
-                    }
+                snapButton(icon: "rectangle.trailinghalf.filled") {
+                    connection.sendWindowMove(windowId: win.id, displayId: primaryDisp, zone: "right")
                 }
             }
-            .padding(.top, 10)
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.pdCardBackground)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.pdBorder, lineWidth: 1)
-        )
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.pdCardBackground))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.pdBorder, lineWidth: 0.5))
         .onDrag {
             Haptics.shared.click()
             return NSItemProvider(object: win.id as NSString)
         }
-        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
-    private func placementButton(
-        icon: String,
-        title: String?,
-        large: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
+    private func snapButton(icon: String, action: @escaping () -> Void) -> some View {
         Button(action: {
             Haptics.shared.click()
             action()
         }) {
-            HStack(spacing: 3) {
-                Image(systemName: icon)
-                    .font(.system(size: 10, weight: .medium))
-                if let title = title {
-                    Text(title)
-                        .font(.system(size: 10, weight: .semibold))
-                }
-            }
-            .foregroundColor(.pdSecondaryText)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
-            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.pdElevatedCard))
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.pdSecondaryText)
+                .frame(width: 32, height: 32)
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color.pdElevatedCard))
         }
     }
 }
